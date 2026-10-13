@@ -35,22 +35,22 @@ jobs:
           mkdir source
           unzip -q Kochi_Playable_Android_Prototype.zip -d source
 
-      - name: Configure app identity and landscape
+      - name: Configure app identity
         working-directory: source
         run: |
-          sed -i 's/Kochi: The Uncounted Road/Kochi: Homecoming/g' capacitor.config.json
-          sed -i 's/com.aswinmohan.kochiuncountedroad/com.aswinmohan.kochihomecoming/g'
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'capacitor.config.json';
+          const config = JSON.parse(fs.readFileSync(path, 'utf8'));
 
-          cat > capacitor.config.json <<'EOF'
-          {
-            "appId": "com.aswinmohan.kochihomecoming",
-            "appName": "Kochi: Homecoming",
-            "webDir": "www",
-            "server": {
-              "androidScheme": "https"
-            }
-          }
-          EOF
+          config.appId = 'com.aswinmohan.kochihomecoming';
+          config.appName = 'Kochi: Homecoming';
+
+          fs.writeFileSync(
+            path,
+            JSON.stringify(config, null, 2) + '\n'
+          );
+          NODE
 
       - name: Install dependencies
         working-directory: source
@@ -67,8 +67,39 @@ jobs:
       - name: Set landscape orientation
         working-directory: source/android
         run: |
-          MANIFEST="app/src/main/AndroidManifest.xml"
-          sed -i 's/<activity /<activity android:screenOrientation="landscape" /' "$MANIFEST"
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          manifest = Path("app/src/main/AndroidManifest.xml")
+          content = manifest.read_text()
+
+          pattern = r'<activity\b[^>]*>'
+          match = re.search(pattern, content)
+
+          if not match:
+              raise SystemExit("ERROR: No activity tag found in AndroidManifest.xml")
+
+          activity = match.group(0)
+
+          if re.search(r'\bandroid:screenOrientation\s*=', activity):
+              activity = re.sub(
+                  r'\bandroid:screenOrientation\s*=\s*"[^"]*"',
+                  'android:screenOrientation="landscape"',
+                  activity
+              )
+          else:
+              activity = activity[:-1] + ' android:screenOrientation="landscape">'
+
+          content = content[:match.start()] + activity + content[match.end():]
+          manifest.write_text(content)
+          print("Landscape orientation configured.")
+          PY
+
+      - name: Verify Android manifest
+        working-directory: source/android
+        run: |
+          grep -n 'screenOrientation="landscape"' app/src/main/AndroidManifest.xml
 
       - name: Build APK
         working-directory: source/android
