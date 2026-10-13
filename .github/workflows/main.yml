@@ -4,7 +4,9 @@ name: Build Kochi Homecoming APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches:
+      - main
+      - master
 
 permissions:
   contents: read
@@ -14,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -33,11 +35,22 @@ jobs:
           mkdir source
           unzip -q Kochi_Playable_Android_Prototype.zip -d source
 
-      - name: Set app identity
+      - name: Configure app identity and landscape
         working-directory: source
         run: |
           sed -i 's/Kochi: The Uncounted Road/Kochi: Homecoming/g' capacitor.config.json
-          sed -i 's/com.aswinmohan.kochiuncountedroad/com.aswinmohan.kochihomecoming/g' capacitor.config.json
+          sed -i 's/com.aswinmohan.kochiuncountedroad/com.aswinmohan.kochihomecoming/g'
+
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.aswinmohan.kochihomecoming",
+            "appName": "Kochi: Homecoming",
+            "webDir": "www",
+            "server": {
+              "androidScheme": "https"
+            }
+          }
+          EOF
 
       - name: Install dependencies
         working-directory: source
@@ -50,6 +63,12 @@ jobs:
       - name: Sync Android assets
         working-directory: source
         run: npx cap sync android
+
+      - name: Set landscape orientation
+        working-directory: source/android
+        run: |
+          MANIFEST="app/src/main/AndroidManifest.xml"
+          sed -i 's/<activity /<activity android:screenOrientation="landscape" /' "$MANIFEST"
 
       - name: Build APK
         working-directory: source/android
