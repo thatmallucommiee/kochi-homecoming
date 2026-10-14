@@ -20,7 +20,7 @@ func _ready() -> void:
 	camera_pivot = get_node_or_null("CameraPivot")
 	camera = get_node_or_null("CameraPivot/Camera3D")
 	if camera_pivot:
-		camera_pivot.rotation.y = yaw
+		camera_pivot.rotation.y = wrapf(yaw - rotation.y, -PI, PI)
 	if camera:
 		camera.rotation.x = pitch
 
@@ -34,7 +34,7 @@ func _physics_process(delta: float) -> void:
 	# Rotate only around Y so camera pitch never pushes the player into the ground.
 	var direction := Vector3(move.x, 0.0, move.y)
 	if camera_pivot:
-		var yaw_basis := Basis(Vector3.UP, camera_pivot.global_rotation.y)
+		var yaw_basis := Basis(Vector3.UP, yaw)
 		direction = yaw_basis * direction
 	direction.y = 0.0
 	if direction.length_squared() > 1.0:
@@ -50,6 +50,9 @@ func _physics_process(delta: float) -> void:
 		velocity.y = -0.2
 	if moving:
 		rotation.y = lerp_angle(rotation.y, atan2(-direction.x, -direction.z), minf(1.0, turn_speed * delta))
+	if camera_pivot:
+		# Keep camera world yaw independent from the body rotation.
+		camera_pivot.rotation.y = wrapf(yaw - rotation.y, -PI, PI)
 	move_and_slide()
 
 func _unhandled_input(event: InputEvent) -> void:
