@@ -79,6 +79,39 @@ new = '''\tfunc _process(_delta: float) -> void:
 if old not in game:
     raise SystemExit("Could not safely locate joystick _process() to fix release handling")
 game = game.replace(old, new)
+# Keep the starter's atmosphere, but remove its duplicate test road and block meshes.
+# CityWorld owns the actual playable city so two competing layouts do not overlap.
+world_start = game.find("func _build_world() -> void:")
+world_end = game.find("func _build_kerala_blocks() -> void:", world_start)
+if world_start < 0 or world_end < 0:
+    raise SystemExit("Could not safely locate starter _build_world()")
+world_replacement = '''func _build_world() -> void:
+	var env := WorldEnvironment.new()
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_SKY
+	var sky := Sky.new()
+	var sky_mat := ProceduralSkyMaterial.new()
+	sky_mat.sky_top_color = Color(0.08, 0.12, 0.16)
+	sky_mat.sky_horizon_color = Color(0.28, 0.31, 0.30)
+	sky.sky_material = sky_mat
+	environment.sky = sky
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color(0.47, 0.52, 0.55)
+	environment.ambient_light_energy = 0.7
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.environment = environment
+	add_child(env)
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-42, -28, 0)
+	sun.light_color = Color(1.0, 0.78, 0.58)
+	sun.light_energy = 0.65
+	add_child(sun)
+	if rain_mode:
+		_build_rain()
+
+'''
+game = game[:world_start] + world_replacement + game[world_end:]
+
 # Route the starter's on-screen INTERACT button into the real mission system.
 interact_start = game.find("func _interact() -> void:")
 interact_end = game.find("func _add_box(", interact_start)
