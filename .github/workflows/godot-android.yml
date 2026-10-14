@@ -1,0 +1,45 @@
+name: Build Kochi Homecoming Godot Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download verified Godot starter
+        run: |
+          curl -L --fail --retry 3 \
+            "https://d2ol7oe51mr4n9.cloudfront.net/user_3GFMUlqUCQDFIBIgncSeA0HMz2O/f68d3d84-3d19-48a8-a955-45055232e9e1.zip" \
+            -o /tmp/kochi-godot.zip
+          mkdir -p godot_project
+          unzip -q /tmp/kochi-godot.zip -d godot_project
+          find godot_project -name project.godot -print
+
+      - name: Locate Godot project
+        id: project
+        run: |
+          PROJECT_FILE="$(find "$GITHUB_WORKSPACE/godot_project" -name project.godot -print -quit)"
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "project.godot was not found in the starter archive" >&2
+            exit 1
+          fi
+          echo "path=$(dirname "$PROJECT_FILE")" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+
+      - name: Validate project
+        run: godot --headless --editor --path "${{ steps.project.outputs.path }}" --quit
+
+      - name: Report Android export status
+        run: |
+          echo "The starter project has been imported and validated."
+          echo "An Android APK export requires a configured Android export preset and matching SDK/templates."
+          echo "This workflow intentionally stops before claiming an APK exists until those prerequisites are verified."
