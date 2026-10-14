@@ -140,16 +140,18 @@ func clear_nearby_interaction() -> void:
 
 func interact() -> void:
 	if nearby_interaction == "":
-		_show_toast("Objective advanced (prototype)")
-		advance_objective()
+		_show_toast("Nothing to interact with nearby.")
 		return
 	var action := nearby_action
 	var label := nearby_interaction
 	clear_nearby_interaction()
+	_show_toast(label)
 	if action.is_valid():
 		action.call()
-	_show_toast(label)
-	advance_objective()
+
+func show_story_line(message: String, duration: float = 5.0) -> void:
+	_show_toast(message)
+	toast_timer = maxf(duration, 1.0)
 
 func advance_objective() -> void:
 	if mission_index >= missions.size():
