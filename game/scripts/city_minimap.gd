@@ -80,8 +80,8 @@ func _update_target() -> void:
 				_target = Vector3(-144.0, 0.0, 9.6)
 			_has_target = true
 
-func _world_to_map(world_pos: Vector3, player_pos: Vector3, center: Vector2, scale: float) -> Vector2:
-	return center + Vector2(world_pos.x - player_pos.x, world_pos.z - player_pos.z) * scale
+func _world_to_map(world_pos: Vector3, player_pos: Vector3, center: Vector2, map_scale: float) -> Vector2:
+	return center + Vector2(world_pos.x - player_pos.x, world_pos.z - player_pos.z) * map_scale
 
 func _draw() -> void:
 	var map_size := minf(size.x, size.y)
@@ -91,7 +91,7 @@ func _draw() -> void:
 	draw_rect(panel, MAP_BACKGROUND, true)
 	var inset := 9.0
 	var center := Vector2(map_size * 0.5, map_size * 0.5)
-	var scale := (map_size - inset * 2.0) / MAP_RANGE_METERS
+	var map_scale := (map_size - inset * 2.0) / MAP_RANGE_METERS
 	var player_pos := Vector3.ZERO
 	if is_instance_valid(_player):
 		player_pos = _player.global_position
@@ -105,28 +105,28 @@ func _draw() -> void:
 	for bx in range(first_x, last_x):
 		for bz in range(first_z, last_z):
 			var block_center := Vector3((float(bx) + 0.5) * GRID_SIZE, 0.0, (float(bz) + 0.5) * GRID_SIZE)
-			var rect_center := _world_to_map(block_center, player_pos, center, scale)
-			var block_rect := Rect2(rect_center - Vector2(17.0, 17.0) * scale, Vector2(34.0, 34.0) * scale)
+			var rect_center := _world_to_map(block_center, player_pos, center, map_scale)
+			var block_rect := Rect2(rect_center - Vector2(17.0, 17.0) * map_scale, Vector2(34.0, 34.0) * map_scale)
 			if panel.grow(-inset).intersects(block_rect):
 				draw_rect(block_rect, BUILDING_COLOR, true)
 
 	# Roads are drawn as a casing and a quieter center surface, with junctions lining up with the world grid.
 	for gx in range(first_x - 1, last_x + 2):
 		var road_x := float(gx) * GRID_SIZE
-		var screen_x := center.x + (road_x - player_pos.x) * scale
+		var screen_x := center.x + (road_x - player_pos.x) * map_scale
 		if screen_x >= -10.0 and screen_x <= map_size + 10.0:
 			draw_line(Vector2(screen_x, 0.0), Vector2(screen_x, map_size), ROAD_EDGE, 8.0, true)
 			draw_line(Vector2(screen_x, 0.0), Vector2(screen_x, map_size), ROAD_COLOR, 5.0, true)
 	for gz in range(first_z - 1, last_z + 2):
 		var road_z := float(gz) * GRID_SIZE
-		var screen_y := center.y + (road_z - player_pos.z) * scale
+		var screen_y := center.y + (road_z - player_pos.z) * map_scale
 		if screen_y >= -10.0 and screen_y <= map_size + 10.0:
 			draw_line(Vector2(0.0, screen_y), Vector2(map_size, screen_y), ROAD_EDGE, 8.0, true)
 			draw_line(Vector2(0.0, screen_y), Vector2(map_size, screen_y), ROAD_COLOR, 5.0, true)
 
 	# Active objective line and destination marker.
 	if _has_target and is_instance_valid(_player):
-		var target_pt := _world_to_map(_target, player_pos, center, scale)
+		var target_pt := _world_to_map(_target, player_pos, center, map_scale)
 		var target_inside := target_pt.x >= inset and target_pt.x <= map_size - inset and target_pt.y >= inset and target_pt.y <= map_size - inset
 		if target_inside:
 			draw_line(center, target_pt, Color(0.86, 0.67, 0.40, 0.75), 2.0, true)
