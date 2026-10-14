@@ -32,6 +32,14 @@ jobs:
           fi
           echo "GODOT_PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
 
+      - name: Inspect starter character and movement scripts
+        shell: bash
+        run: |
+          echo "=== Starter scripts ==="
+          find "$GODOT_PROJECT_DIR" -type f -name '*.gd' -print
+          echo "=== Character movement references ==="
+          grep -RniE 'get_vector|move_and_slide|InputEventScreenDrag|joystick|CharacterBody3D|velocity\.x|velocity\.z' "$GODOT_PROJECT_DIR" --include='*.gd' || true
+
       - name: Install city and story gameplay systems
         shell: bash
         run: |
