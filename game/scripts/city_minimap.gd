@@ -88,6 +88,8 @@ func _draw() -> void:
 	var map_size := minf(size.x, size.y)
 	if map_size <= 8.0:
 		return
+	var map_offset := Vector2((size.x - map_size) * 0.5, (size.y - map_size) * 0.5)
+	draw_set_transform(map_offset)
 	var panel := Rect2(Vector2.ZERO, Vector2(map_size, map_size))
 	draw_rect(panel, MAP_BACKGROUND, true)
 	var inset := 9.0 if not full_city_view else 18.0
