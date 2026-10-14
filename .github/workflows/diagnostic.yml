@@ -1,0 +1,13 @@
+name: CI Diagnostic
+on:
+  push:
+    branches: [build-v3-2-android]
+    paths:
+      - '.github/workflows/diagnostic.yml'
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm runner starts
+        run: echo "GitHub Actions runner started."
