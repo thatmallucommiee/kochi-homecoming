@@ -24,6 +24,7 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/source"
           cat kochi-source-v3.2.tar.xz.b64.part* | base64 --decode | tar -xJ -C "$GITHUB_WORKSPACE/source"
           test -f "$GITHUB_WORKSPACE/source/project.godot"
+          python3 "$GITHUB_WORKSPACE/build-patches/fix-game-parse.py" "$GITHUB_WORKSPACE/source/scripts/game.gd"
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/source" >> "$GITHUB_ENV"
 
       - name: Run static and drivetrain checks
