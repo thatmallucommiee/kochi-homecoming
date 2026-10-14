@@ -140,7 +140,8 @@ func clear_nearby_interaction() -> void:
 
 func interact() -> void:
 	if nearby_interaction == "":
-		_show_toast("Nothing to interact with nearby.")
+		_show_toast("Objective advanced (prototype)")
+		advance_objective()
 		return
 	var action := nearby_action
 	var label := nearby_interaction
