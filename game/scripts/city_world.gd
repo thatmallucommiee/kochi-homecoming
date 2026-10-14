@@ -1193,6 +1193,67 @@ func _build_parked_vehicles() -> void:
 		body.add_child(collision)
 		bike.add_child(body)
 
+	# Distributed curb parking makes the wider district feel occupied, not like
+	# one busy spawn street surrounded by empty roads.
+	for i in range(10):
+		var axis := i % 2
+		var road_index := (i * 3 % 9) - 4
+		var line := float(road_index) * GRID
+		var segment := (i % 8) - 4
+		var along := float(segment) * GRID + _rng.randf_range(-18.0, 18.0)
+		var side := 1.0 if i % 4 < 2 else -1.0
+		var position := Vector3(along, 0.03, line + side * 12.3) if axis == 0 else Vector3(line + side * 12.3, 0.03, along)
+		var attempts := 0
+		while _reserved_for_landmark(position) and attempts < 4:
+			along += 26.0
+			position = Vector3(along, 0.03, line + side * 12.3) if axis == 0 else Vector3(line + side * 12.3, 0.03, along)
+			attempts += 1
+		var car := _spawn_vehicle("car", ["car_white", "car_silver", "car_blue", "car_red", "car_green"][i % 5])
+		car.name = "DistrictParkedCar_%02d" % i
+		car.position = position
+		car.rotation.y = PI * 0.5 if axis == 1 else 0.0
+		_city_root.add_child(car)
+		var body := StaticBody3D.new()
+		body.name = "DistrictParkedCarCollision"
+		body.position = Vector3(0, 0.68, 0)
+		var collision := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(4.2, 1.35, 1.9)
+		collision.shape = shape
+		body.add_child(collision)
+		car.add_child(body)
+
+	# Scooters and motorcycles are parked outside shops and on residential lanes.
+	for i in range(12):
+		var axis := i % 2
+		var road_index := (i * 5 % 9) - 4
+		var line := float(road_index) * GRID
+		var segment := (i * 3 % 8) - 4
+		var along := float(segment) * GRID + _rng.randf_range(-20.0, 20.0)
+		var side := 1.0 if i % 4 < 2 else -1.0
+		var offset := ROAD_HALF + SIDEWALK_WIDTH * 0.70
+		var position := Vector3(along, 0.03, line + side * offset) if axis == 0 else Vector3(line + side * offset, 0.03, along)
+		var attempts := 0
+		while _reserved_for_landmark(position) and attempts < 4:
+			along += 24.0
+			position = Vector3(along, 0.03, line + side * offset) if axis == 0 else Vector3(line + side * offset, 0.03, along)
+			attempts += 1
+		var bike := _spawn_vehicle("bike", "car_black" if i % 2 == 0 else "car_red")
+		bike.name = "DistrictParkedScooter_%02d" % i
+		bike.position = position
+		bike.rotation.y = PI * 0.5 if axis == 1 else 0.0
+		_city_root.add_child(bike)
+		var body := StaticBody3D.new()
+		body.name = "DistrictParkedScooterCollision"
+		body.position = Vector3(0, 0.55, 0)
+		var collision := CollisionShape3D.new()
+		var shape := CapsuleShape3D.new()
+		shape.radius = 0.40
+		shape.height = 1.8
+		collision.shape = shape
+		body.add_child(collision)
+		bike.add_child(body)
+
 func _build_idle_citizens() -> void:
 	# Rafi is visible outside the garage; tea-stall customers stand nearby.
 	var rafi := _spawn_pedestrian("shirt_green", "pants_dark")
