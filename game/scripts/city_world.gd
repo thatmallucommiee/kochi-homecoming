@@ -746,8 +746,8 @@ func _build_accident_site() -> void:
 	_box("metal", center + Vector3(-1.6, 1.10, 0), Vector3(0.20, 0.22, 1.76), Vector3(0, 0, 0.22))
 	for wheel_x in [-1.3, 1.3]:
 		for wheel_z in [-0.88, 0.88]:
-			_cylinder("tire", center + Vector3(wheel_x, 0.30, wheel_z), Vector3(0.68, 0.45, 0.68), Vector3(0, 0, PI * 0.5))
-			_cylinder("metal_light", center + Vector3(wheel_x, 0.30, wheel_z * 1.02), Vector3(0.34, 0.46, 0.34), Vector3(0, 0, PI * 0.5))
+			_cylinder("tire", center + Vector3(wheel_x, 0.30, wheel_z), Vector3(0.68, 0.45, 0.68), Vector3(PI * 0.5, 0, 0))
+			_cylinder("metal_light", center + Vector3(wheel_x, 0.30, wheel_z * 1.02), Vector3(0.34, 0.46, 0.34), Vector3(PI * 0.5, 0, 0))
 	for shard in range(22):
 		var offset := Vector3(_rng.randf_range(-5.0, 4.5), 0.14, _rng.randf_range(6.5, 13.0))
 		_box("glass_shards", Vector3(-144.0, 0.0, 0.0) + offset, Vector3(_rng.randf_range(0.06, 0.28), 0.025, _rng.randf_range(0.05, 0.22)), Vector3(0, _rng.randf_range(-0.5, 0.5), _rng.randf_range(-0.6, 0.6)))
@@ -1109,7 +1109,7 @@ func _spawn_vehicle(kind: String, color_id: String) -> Node3D:
 		var wheel := MeshInstance3D.new()
 		wheel.mesh = wheel_mesh
 		wheel.material_override = _materials["metal"]
-		wheel.rotation.z = PI * 0.5
+		wheel.rotation.x = PI * 0.5
 		wheel.position = wheel_pos
 		root.add_child(wheel)
 	# Headlamps and rear lamps remain simple material instances.
@@ -1179,7 +1179,7 @@ func _build_parked_vehicles() -> void:
 	for i in range(6):
 		var bike := _spawn_vehicle("bike", "car_black" if i % 2 == 0 else "car_red")
 		bike.name = "ParkedScooter"
-		bike.position = Vector3(-39.0 + float(i) * 1.7, 0.03, 13.6)
+		bike.position = Vector3(-44.0 + float(i) * 1.35, 0.03, 13.6)
 		bike.rotation.y = PI * 0.5
 		_city_root.add_child(bike)
 		var body := StaticBody3D.new()
