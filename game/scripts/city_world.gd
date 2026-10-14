@@ -581,7 +581,7 @@ func _build_street_life() -> void:
 	# Bus shelters, small stalls, waste bins and roadside notice boards.
 	for i in range(-2, 3):
 		var x := float(i) * GRID + 22.0
-		var z := -GRID * 4.0 + ROAD_HALF + SIDEWALK_WIDTH * 0.5
+		var z := -GRID * 2.0 - ROAD_HALF - SIDEWALK_WIDTH * 0.5
 		_box("metal", Vector3(x, 1.4, z), Vector3(5.0, 0.16, 2.2))
 		for post_x in [-2.2, 2.2]:
 			for post_z in [-0.8, 0.8]:
