@@ -528,7 +528,7 @@ func _build_landmarks() -> void:
 	_box("concrete", Vector3(48.0, 0.10, 48.0), Vector3(28.0, 0.20, 17.0))
 	_box("wall_gray", Vector3(48.0, 2.0, 56.0), Vector3(26.0, 4.0, 0.5))
 	_box("roof_dark", Vector3(48.0, 4.2, 48.0), Vector3(28.0, 0.35, 18.0))
-	_box("sign_blue", Vector3(48.0, 3.0, 55.67), Vector3(13.0, 0.9, 0.12))
+	_box("sign_blue", Vector3(48.0, 3.0, 40.33), Vector3(13.0, 0.9, 0.12))
 	var garage_label := Label3D.new()
 	garage_label.name = "RafiGarageSign"
 	garage_label.text = "RAFI AUTO WORKS"
@@ -536,14 +536,14 @@ func _build_landmarks() -> void:
 	garage_label.pixel_size = 0.012
 	garage_label.outline_size = 5
 	garage_label.modulate = Color("#fff0d2")
-	garage_label.position = Vector3(48.0, 2.72, 55.55)
-	garage_label.rotation.y = PI
+	garage_label.position = Vector3(48.0, 2.72, 40.15)
+	garage_label.rotation.y = 0.0
 	_city_root.add_child(garage_label)
 	# Garage shutter and bays.
 	for bay in range(2):
-		_box("metal", Vector3(42.0 + float(bay) * 12.0, 1.45, 55.64), Vector3(10.5, 2.75, 0.18))
+		_box("metal", Vector3(42.0 + float(bay) * 12.0, 1.45, 40.36), Vector3(10.5, 2.75, 0.18))
 		for rib in range(7):
-			_box("metal_light", Vector3(42.0 + float(bay) * 12.0, 0.35 + float(rib) * 0.34, 55.52), Vector3(10.2, 0.035, 0.06))
+			_box("metal_light", Vector3(42.0 + float(bay) * 12.0, 0.35 + float(rib) * 0.34, 40.48), Vector3(10.2, 0.035, 0.06))
 	# A simple tea stall opposite the junction creates a recognisable street-life cue.
 	_box("wall_ochre", Vector3(-48.0, 1.5, 48.0), Vector3(8.5, 3.0, 7.0))
 	_box("roof_red", Vector3(-48.0, 3.25, 48.0), Vector3(9.2, 0.3, 7.6))
