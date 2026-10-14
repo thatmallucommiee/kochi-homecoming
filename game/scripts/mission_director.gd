@@ -53,6 +53,8 @@ var objective_label: Label
 var hint_label: Label
 var toast_label: Label
 var toast_timer := 0.0
+var interact_button: Button
+var driving_mode := false
 var map_overlay: Control
 var map_open := false
 var nearby_interaction := ""
@@ -154,7 +156,7 @@ func _build_hud() -> void:
 	hint_label.add_theme_font_size_override("font_size", 16)
 	root.add_child(hint_label)
 
-	var interact_button := Button.new()
+	interact_button = Button.new()
 	interact_button.text = "INTERACT"
 	interact_button.custom_minimum_size = Vector2(150, 58)
 	# Keep INTERACT clear of the starter's RUN button and the sprint control.
@@ -194,10 +196,20 @@ func start_current_mission() -> void:
 func set_nearby_interaction(label: String, action: Callable = Callable()) -> void:
 	nearby_interaction = label
 	nearby_action = action
+	if is_instance_valid(interact_button):
+		interact_button.disabled = driving_mode or nearby_interaction == ""
 
 func clear_nearby_interaction() -> void:
 	nearby_interaction = ""
 	nearby_action = Callable()
+	if is_instance_valid(interact_button):
+		interact_button.disabled = true
+
+func set_driving_mode(enabled: bool) -> void:
+	driving_mode = enabled
+	if is_instance_valid(interact_button):
+		interact_button.visible = not enabled
+		interact_button.disabled = enabled or nearby_interaction == ""
 
 func interact() -> void:
 	if nearby_interaction == "":
