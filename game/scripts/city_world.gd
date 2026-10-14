@@ -1004,7 +1004,7 @@ func _setup_lighting(scene: Node) -> void:
 
 func _build_traffic() -> void:
 	var body_colors := ["car_white", "car_silver", "car_blue", "car_red", "car_green", "car_black"]
-	for i in range(14):
+	for i in range(18):
 		var axis := 0 if i % 2 == 0 else 1
 		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var direction := 1.0 if i % 2 == 0 else -1.0
@@ -1015,7 +1015,7 @@ func _build_traffic() -> void:
 		root.position = pos
 		_city_root.add_child(root)
 		_traffic.append({"root": root, "axis": axis, "line": line, "lane": lane, "direction": direction, "speed": _rng.randf_range(6.0, 10.5)})
-	for i in range(7):
+	for i in range(9):
 		var axis := 0 if i % 2 == 0 else 1
 		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var direction := -1.0 if i % 2 == 0 else 1.0
@@ -1026,13 +1026,13 @@ func _build_traffic() -> void:
 		root.position = pos
 		_city_root.add_child(root)
 		_traffic.append({"root": root, "axis": axis, "line": line, "lane": lane, "direction": direction, "speed": _rng.randf_range(4.2, 6.3)})
-	for bus_index in range(2):
+	for bus_index in range(3):
 		var bus := _spawn_vehicle("bus", "bus_blue")
 		bus.position = Vector3(-150.0 + float(bus_index) * 170.0, 0.03, -GRID + 3.0)
 		_city_root.add_child(bus)
 		_traffic.append({"root": bus, "axis": 0, "line": -GRID, "lane": 3.0, "direction": 1.0 if bus_index == 0 else -1.0, "speed": 4.5})
 	# Scooters and motorcycles are common street traffic in Kochi.
-	for bike_index in range(5):
+	for bike_index in range(8):
 		var bike_axis := 0 if bike_index % 2 == 0 else 1
 		var bike_line := float(_rng.randi_range(-3, 3)) * GRID
 		var bike_direction := 1.0 if bike_index % 2 == 0 else -1.0
@@ -1222,6 +1222,28 @@ func _build_idle_citizens() -> void:
 		_city_root.add_child(citizen)
 		_add_citizen_collision(citizen.global_position, 0.28, 1.7)
 
+	# Additional commuters and neighbours are distributed around separate blocks,
+	# rather than clustering all visible life around the starting street.
+	for i in range(8):
+		var axis := i % 2
+		var road_index := (i % 7) - 3
+		var line := float(road_index) * GRID
+		var segment := int(i / 2) - 2
+		var along := float(segment) * GRID + _rng.randf_range(-24.0, 24.0)
+		var side := 1.0 if i % 4 < 2 else -1.0
+		var position := Vector3(along, 0.17, line + side * (ROAD_HALF + SIDEWALK_WIDTH * 0.52)) if axis == 0 else Vector3(line + side * (ROAD_HALF + SIDEWALK_WIDTH * 0.52), 0.17, along)
+		var attempts := 0
+		while _reserved_for_landmark(position) and attempts < 4:
+			along += 28.0
+			position = Vector3(along, 0.17, line + side * (ROAD_HALF + SIDEWALK_WIDTH * 0.52)) if axis == 0 else Vector3(line + side * (ROAD_HALF + SIDEWALK_WIDTH * 0.52), 0.17, along)
+			attempts += 1
+		var neighbour := _spawn_pedestrian(shirts[i % shirts.size()], "pants_blue" if i % 3 == 0 else "pants_dark")
+		neighbour.name = "Neighbour_%02d" % i
+		neighbour.position = position
+		neighbour.rotation.y = float((i + 1) % 4) * PI * 0.5
+		_city_root.add_child(neighbour)
+		_add_citizen_collision(neighbour.global_position, 0.27, 1.7)
+
 func _add_citizen_collision(position: Vector3, radius: float, height: float) -> void:
 	var body := StaticBody3D.new()
 	body.name = "CitizenCollision"
@@ -1236,8 +1258,8 @@ func _add_citizen_collision(position: Vector3, radius: float, height: float) -> 
 
 func _build_pedestrians() -> void:
 	var shirts := ["shirt_blue", "shirt_white", "shirt_green", "shirt_maroon", "shirt_ochre"]
-	for i in range(24):
-		var axis := 0 if i < 13 else 1
+	for i in range(32):
+		var axis := 0 if i < 16 else 1
 		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var side := 1.0 if i % 2 == 0 else -1.0
 		var lane := side * (ROAD_HALF + SIDEWALK_WIDTH * 0.43)
