@@ -4,8 +4,7 @@ on:
   push:
     branches: [build-v3-2-android]
     paths:
-      - 'kochi-source-v3.2.tar.xz.b64.part*'
-      - '.github/workflows/build-v3-2-android.yml'
+      - 'build-results/rebuild-trigger.txt'
   workflow_dispatch:
 
 permissions:
