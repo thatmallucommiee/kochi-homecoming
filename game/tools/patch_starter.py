@@ -112,7 +112,21 @@ world_replacement = '''func _build_world() -> void:
 '''
 game = game[:world_start] + world_replacement + game[world_end:]
 
-# Route the starter's on-screen INTERACT button into the real mission system.
+# Remove the starter's duplicate INTERACT button. MissionDirector owns the single
+# contextual button; keeping both caused it to overlap the starter RUN button.
+duplicate_interact_button = '''\tvar interact_btn := Button.new()
+\tinteract_btn.text = "INTERACT"
+\tinteract_btn.custom_minimum_size = Vector2(110, 58)
+\tinteract_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+\tinteract_btn.position = Vector2(-250, -88)
+\tinteract_btn.pressed.connect(_interact)
+\thud.add_child(interact_btn)
+'''
+if duplicate_interact_button not in game:
+    raise SystemExit("Could not safely locate duplicate starter INTERACT button")
+game = game.replace(duplicate_interact_button, "")
+
+# Route the starter's on-screen INTERACT handler into the real mission system.
 interact_start = game.find("func _interact() -> void:")
 interact_end = game.find("func _add_box(", interact_start)
 if interact_start < 0 or interact_end < 0:
