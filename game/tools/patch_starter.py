@@ -59,7 +59,7 @@ game = game.replace(
 )
 game = game.replace(
     "vector = Vector2((event.position - global_position - origin).x, -(event.position - global_position - origin).y).limit_length(radius) / radius",
-    "var drag: Vector2 = event.position - origin\n\t\t\t\tvector = Vector2(drag.x, -drag.y).limit_length(radius) / radius"
+    "var drag: Vector2 = event.position - origin\n\t\t\t\tvector = Vector2(drag.x, drag.y).limit_length(radius) / radius"
 )
 old = '''\tfunc _process(_delta: float) -> void:
 \t\tif finger_id != -1:
