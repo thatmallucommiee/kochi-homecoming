@@ -22,6 +22,13 @@ var _walkers: Array[Dictionary] = []
 var _clock := 0.0
 var _built := false
 var _sign_count := 0
+var _tracked_player: Node3D
+var _last_player_position := Vector3.ZERO
+var _walk_distance := 0.0
+var _home_walk_distance := 0.0
+var _home_roof_root: Node3D
+var _home_interior := false
+var _interaction_key := ""
 
 const HOUSE_PALETTE := [
 	"wall_cream", "wall_pale_green", "wall_sky", "wall_ochre",
@@ -46,6 +53,7 @@ func _process(delta: float) -> void:
 	_clock += delta
 	_update_traffic(delta)
 	_update_walkers(delta)
+	_update_story_triggers()
 
 func _install_city(scene: Node) -> void:
 	if not is_instance_valid(scene):
@@ -70,6 +78,7 @@ func _install_city(scene: Node) -> void:
 	_build_buildings()
 	_build_street_life()
 	_build_landmarks()
+	_build_story_landmarks()
 	_flush_static_batches()
 	_build_traffic()
 	_build_pedestrians()
@@ -98,6 +107,10 @@ func _make_materials() -> void:
 	_mat("wall_mint", Color("#a8bba5"), 0.9)
 	_mat("wall_gray", Color("#858b8b"), 0.95)
 	_mat("concrete", Color("#9a978d"), 0.95)
+	_mat("floor_redoxide", Color("#914f3f"), 0.92)
+	_mat("sofa_fabric", Color("#58604d"), 0.95)
+	_mat("photo_paper", Color("#bbaa88"), 0.92)
+	_mat("glass_shards", Color("#8fabad"), 0.22)
 	_mat("roof_red", Color("#79483b"), 0.95)
 	_mat("roof_dark", Color("#41494d"), 0.9)
 	_mat("wood", Color("#654b38"), 0.9)
@@ -161,6 +174,10 @@ func _apply_city_textures() -> void:
 		"wall_mint": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
 		"wall_gray": {"file": "plaster.svg", "scale": 0.22, "roughness": 0.96},
 		"concrete": {"file": "concrete.svg", "scale": 0.18, "roughness": 0.97},
+		"floor_redoxide": {"file": "concrete.svg", "scale": 0.10, "roughness": 0.94},
+		"sofa_fabric": {"file": "plaster.svg", "scale": 0.90, "roughness": 0.99},
+		"photo_paper": {"file": "wood.svg", "scale": 0.60, "roughness": 0.99},
+		"glass_shards": {"file": "glass.svg", "scale": 0.30, "roughness": 0.25},
 		"roof_red": {"file": "terracotta.svg", "scale": 0.38, "roughness": 0.91},
 		"roof_dark": {"file": "concrete.svg", "scale": 0.12, "roughness": 0.92},
 		"wood": {"file": "wood.svg", "scale": 0.20, "roughness": 0.90},
@@ -339,6 +356,10 @@ func _reserved_for_landmark(position: Vector3) -> bool:
 	if position.distance_to(Vector3(48.0, 0.0, 48.0)) < 21.0:
 		return true
 	if position.distance_to(Vector3(-48.0, 0.0, 48.0)) < 13.0:
+		return true
+	if position.distance_to(Vector3(-48.0, 0.0, -72.0)) < 19.0:
+		return true
+	if position.distance_to(Vector3(-144.0, 0.0, 10.0)) < 24.0:
 		return true
 	return false
 
