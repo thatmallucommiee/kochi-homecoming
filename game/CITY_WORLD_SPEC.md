@@ -4,8 +4,8 @@ This file tracks the first procedural city pass. It is a runtime-generated 3D di
 
 ## City features in this pass
 
-- Seven-by-seven connected road grid with asphalt, broken lane marks, double center lines, zebra crossings, sidewalks and drainage.
-- Approximately 150–200 street-front building shells, with a further set of small inner-lot homes/workshops. Building types vary between one-storey Kerala homes, mixed-use shops and taller apartment/commercial blocks.
+- Nine-by-nine connected road grid with asphalt, broken lane marks, double center lines, zebra crossings, sidewalks and drainage.
+- Roughly 300–400 street-front building shells plus inner-lot homes/workshops, with the final count determined by the procedural lot layout. Building types vary between one-storey Kerala homes, mixed-use shops and taller apartment/commercial blocks.
 - Facade detail: windows and frames, shopfront shutters, awnings, colored signboards, some balconies, AC units, rooftop tanks/antennas and a few tiled-roof houses.
 - Roadside palms and broad-leaf trees, utility poles, overhead wires, lamps, patched asphalt and puddles.
 - A simple bus shelter, street-side clutter, a central junction signal, a tea stall and a reserved plot for Rafi's Auto Works.
