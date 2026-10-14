@@ -110,6 +110,7 @@ func _make_materials() -> void:
 	_mat("floor_redoxide", Color("#914f3f"), 0.92)
 	_mat("sofa_fabric", Color("#58604d"), 0.95)
 	_mat("photo_paper", Color("#bbaa88"), 0.92)
+	_mat("family_photo", Color("#fff1d2"), 0.96)
 	_mat("glass_shards", Color("#8fabad"), 0.22)
 	_mat("tire", Color("#252729"), 0.98)
 	_mat("roof_red", Color("#79483b"), 0.95)
@@ -178,6 +179,7 @@ func _apply_city_textures() -> void:
 		"floor_redoxide": {"file": "concrete.svg", "scale": 0.10, "roughness": 0.94},
 		"sofa_fabric": {"file": "plaster.svg", "scale": 0.90, "roughness": 0.99},
 		"photo_paper": {"file": "wood.svg", "scale": 0.60, "roughness": 0.99},
+		"family_photo": {"file": "family_photo.svg", "scale": 1.0, "roughness": 0.99},
 		"glass_shards": {"file": "glass.svg", "scale": 0.30, "roughness": 0.25},
 		"tire": {"file": "asphalt.svg", "scale": 0.42, "roughness": 1.0},
 		"roof_red": {"file": "terracotta.svg", "scale": 0.38, "roughness": 0.91},
@@ -680,8 +682,8 @@ func _build_family_home() -> void:
 	_box("glass", Vector3(-52.19, 0.96, -71.1), Vector3(0.06, 0.52, 0.91))
 	_box("wood", Vector3(-52.66, 0.42, -71.1), Vector3(1.12, 0.10, 1.4))
 	_box("wood", Vector3(cx, 2.17, -65.78), Vector3(0.90, 0.88, 0.10))
-	_box("photo_paper", Vector3(cx, 2.17, -65.70), Vector3(0.70, 0.68, 0.045))
-	_box("photo_paper", Vector3(-48.22, 2.22, -65.66), Vector3(0.16, 0.16, 0.035))
+	_box("family_photo", Vector3(cx, 2.17, -65.70), Vector3(0.70, 0.68, 0.045))
+	_box("family_photo", Vector3(-48.22, 2.22, -65.66), Vector3(0.16, 0.16, 0.035))
 	_box("wood", Vector3(-44.0, 0.45, -70.0), Vector3(1.1, 0.10, 0.95))
 	for chair_x in [-44.4, -43.6]:
 		_box("wood", Vector3(chair_x, 0.55, -70.0), Vector3(0.11, 0.7, 0.11))
@@ -690,8 +692,8 @@ func _build_family_home() -> void:
 	_home_roof_root = Node3D.new()
 	_home_roof_root.name = "AbrahamHouseRoof"
 	_city_root.add_child(_home_roof_root)
-	_add_individual_box(_home_roof_root, "roof_red", Vector3(cx, 3.65, -75.25), Vector3(13.0, 0.24, 6.7), Vector3(0.28, 0.0, 0.0))
-	_add_individual_box(_home_roof_root, "roof_red", Vector3(cx, 3.65, -68.75), Vector3(13.0, 0.24, 6.7), Vector3(-0.28, 0.0, 0.0))
+	_add_individual_box(_home_roof_root, "roof_red", Vector3(cx, 3.65, -75.25), Vector3(13.0, 0.24, 6.7), Vector3(-0.28, 0.0, 0.0))
+	_add_individual_box(_home_roof_root, "roof_red", Vector3(cx, 3.65, -68.75), Vector3(13.0, 0.24, 6.7), Vector3(0.28, 0.0, 0.0))
 	_add_individual_box(_home_roof_root, "concrete", Vector3(cx, 4.25, -72.0), Vector3(0.28, 0.22, 13.4))
 	for fence_x in range(-5, 6):
 		if abs(fence_x) < 2:
