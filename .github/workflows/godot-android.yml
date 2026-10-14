@@ -37,6 +37,12 @@ jobs:
         run: |
           echo "=== Starter scripts ==="
           find "$GODOT_PROJECT_DIR" -type f -name '*.gd' -print
+          echo "=== Player controller source ==="
+          sed -n "1,240p" "$GODOT_PROJECT_DIR/scripts/player.gd"
+          echo "=== Game setup source ==="
+          sed -n "1,380p" "$GODOT_PROJECT_DIR/scripts/game.gd"
+          echo "=== Starter assets ==="
+          find "$GODOT_PROJECT_DIR" -type f \( -iname "*.glb" -o -iname "*.gltf" -o -iname "*.tscn" -o -iname "*.fbx" -o -iname "*.obj" \) -print | head -100
           echo "=== Character movement references ==="
           grep -RniE 'get_vector|move_and_slide|InputEventScreenDrag|joystick|CharacterBody3D|velocity\.x|velocity\.z' "$GODOT_PROJECT_DIR" --include='*.gd' || true
 
