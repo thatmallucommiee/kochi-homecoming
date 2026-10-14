@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<rect width="512" height="512" fill="#f3f0e9"/>
+<pattern id="wood" width="256" height="128" patternUnits="userSpaceOnUse">
+<rect width="256" height="128" fill="#eee9df"/>
+<path d="M0 10Q50 4 101 11T256 8 M0 18Q60 13 123 19T256 16 M0 34Q55 28 111 35T256 32 M0 47Q50 42 129 49T256 45 M0 66Q60 61 132 68T256 63 M0 85Q50 79 115 86T256 83 M0 99Q66 94 130 100T256 98 M0 117Q62 112 141 119T256 115" fill="none" stroke="#a7a096" stroke-width="2" opacity=".62"/>
+<path d="M14 28q26 -7 39 0q-12 8 -39 0 M162 74q28 -9 43 0q-15 9 -43 0 M202 108q15 -5 24 0q-9 6 -24 0" fill="none" stroke="#c7bdae" stroke-width="2"/>
+<path d="M91 0l-3 128 M174 0l4 128 M233 0l-2 128" stroke="#d0c7b7" stroke-width="1" opacity=".55"/>
+</pattern>
+<rect width="512" height="512" fill="url(#wood)"/>
+</svg>
