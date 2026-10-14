@@ -53,6 +53,8 @@ var objective_label: Label
 var hint_label: Label
 var toast_label: Label
 var toast_timer := 0.0
+var map_overlay: Control
+var map_open := false
 var nearby_interaction := ""
 var nearby_action: Callable
 
@@ -96,6 +98,47 @@ func _build_hud() -> void:
 		minimap.custom_minimum_size = Vector2(166.0, 166.0)
 		minimap.size = Vector2(166.0, 166.0)
 		root.add_child(minimap)
+	var map_button := Button.new()
+	map_button.text = "MAP"
+	map_button.custom_minimum_size = Vector2(88, 52)
+	map_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	map_button.position = Vector2(-104, 194)
+	map_button.pressed.connect(toggle_full_map)
+	root.add_child(map_button)
+	map_overlay = Control.new()
+	map_overlay.name = "FullMapOverlay"
+	map_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	map_overlay.visible = false
+	map_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(map_overlay)
+	var dimmer := ColorRect.new()
+	dimmer.color = Color(0.025, 0.035, 0.04, 0.94)
+	dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	map_overlay.add_child(dimmer)
+	var map_title := Label.new()
+	map_title.text = "KOCHI  /  CITY MAP"
+	map_title.position = Vector2(28, 24)
+	map_title.add_theme_font_size_override("font_size", 24)
+	map_overlay.add_child(map_title)
+	var full_map_script := load("res://scripts/city_minimap.gd") as Script
+	if full_map_script != null:
+		var full_map := Control.new()
+		full_map.name = "FullCityMap"
+		full_map.set_script(full_map_script)
+		full_map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		full_map.offset_left = 22
+		full_map.offset_top = 64
+		full_map.offset_right = -22
+		full_map.offset_bottom = -84
+		full_map.set("full_city_view", true)
+		map_overlay.add_child(full_map)
+	var close_map := Button.new()
+	close_map.text = "CLOSE MAP"
+	close_map.custom_minimum_size = Vector2(150, 54)
+	close_map.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	close_map.position = Vector2(-176, -24)
+	close_map.pressed.connect(toggle_full_map)
+	map_overlay.add_child(close_map)
 	title_label = Label.new()
 	title_label.add_theme_font_size_override("font_size", 16)
 	title_label.text = "KOCHI: HOMECOMING"
@@ -127,6 +170,12 @@ func _build_hud() -> void:
 	toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	toast_label.add_theme_font_size_override("font_size", 18)
 	root.add_child(toast_label)
+
+func toggle_full_map() -> void:
+	map_open = not map_open
+	if is_instance_valid(map_overlay):
+		map_overlay.visible = map_open
+		map_overlay.mouse_filter = Control.MOUSE_FILTER_STOP if map_open else Control.MOUSE_FILTER_IGNORE
 
 func start_current_mission() -> void:
 	if mission_index >= missions.size():
