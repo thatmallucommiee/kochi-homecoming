@@ -155,6 +155,16 @@ jobs:
       - name: Import and validate Godot project
         run: godot --headless --editor --path "$GODOT_PROJECT_DIR" --quit
 
+      - name: Smoke-test game and city startup
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 120s godot --headless --path "$GODOT_PROJECT_DIR" --quit-after 4 2>&1 | tee "$RUNNER_TEMP/kochihomecoming-smoke.log"
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script|Could not load script" "$RUNNER_TEMP/kochihomecoming-smoke.log"; then
+            echo "Godot reported a script or scene startup error." >&2
+            exit 1
+          fi
+
       - name: Export debug APK
         run: |
           godot --headless --path "$GODOT_PROJECT_DIR" --export-debug "Android" "$GODOT_PROJECT_DIR/build/kochihomecoming-debug.apk"
