@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<rect width="512" height="512" fill="#efede6"/>
+<pattern id="tiles" width="72" height="40" patternUnits="userSpaceOnUse">
+<rect width="72" height="40" fill="#a0a0a0"/>
+<path d="M0 1H72 M0 39H72" stroke="#656565" stroke-width="3"/>
+<path d="M-36 4Q-18 -1 0 4V35Q-18 39 -36 34Z M0 4Q18 -1 36 4V35Q18 39 0 35Z M36 4Q54 -1 72 4V35Q54 39 36 35Z M72 4Q90 -1 108 4V35Q90 39 72 35Z" fill="#efefeb" stroke="#8e8e8e" stroke-width="2"/>
+<path d="M3 7Q17 3 32 7 M39 7Q53 3 68 7" fill="none" stroke="#ffffff" stroke-width="2" opacity=".8"/>
+<path d="M0 35Q18 40 36 35 M36 35Q54 40 72 35" fill="none" stroke="#555555" stroke-width="2" opacity=".7"/>
+</pattern>
+<rect width="512" height="512" fill="url(#tiles)"/>
+<pattern id="dust" width="64" height="64" patternUnits="userSpaceOnUse"><circle cx="8" cy="19" r="1.4" fill="#777" opacity=".32"/><circle cx="45" cy="52" r="1.2" fill="#aaa" opacity=".55"/><path d="M22 8l4 1 M53 28l3 -1 M12 44l4 2" stroke="#aaa" stroke-width="1.2" opacity=".5"/></pattern>
+<rect width="512" height="512" fill="url(#dust)"/>
+</svg>
