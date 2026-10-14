@@ -111,6 +111,7 @@ func _make_materials() -> void:
 	_mat("sofa_fabric", Color("#58604d"), 0.95)
 	_mat("photo_paper", Color("#bbaa88"), 0.92)
 	_mat("glass_shards", Color("#8fabad"), 0.22)
+	_mat("tire", Color("#252729"), 0.98)
 	_mat("roof_red", Color("#79483b"), 0.95)
 	_mat("roof_dark", Color("#41494d"), 0.9)
 	_mat("wood", Color("#654b38"), 0.9)
@@ -178,6 +179,7 @@ func _apply_city_textures() -> void:
 		"sofa_fabric": {"file": "plaster.svg", "scale": 0.90, "roughness": 0.99},
 		"photo_paper": {"file": "wood.svg", "scale": 0.60, "roughness": 0.99},
 		"glass_shards": {"file": "glass.svg", "scale": 0.30, "roughness": 0.25},
+		"tire": {"file": "asphalt.svg", "scale": 0.42, "roughness": 1.0},
 		"roof_red": {"file": "terracotta.svg", "scale": 0.38, "roughness": 0.91},
 		"roof_dark": {"file": "concrete.svg", "scale": 0.12, "roughness": 0.92},
 		"wood": {"file": "wood.svg", "scale": 0.20, "roughness": 0.90},
@@ -635,6 +637,289 @@ func _build_landmarks() -> void:
 	tea_label.rotation.y = 0.0
 	tea_label.modulate = Color("#fff0d2")
 	_city_root.add_child(tea_label)
+
+func _build_story_landmarks() -> void:
+	_build_family_home()
+	_build_accident_site()
+
+func _build_family_home() -> void:
+	# A modest Kerala family house with a usable front doorway and furnished interior.
+	var cx := -48.0
+	var cz := -72.0
+	_box("floor_redoxide", Vector3(cx, -0.015, cz), Vector3(12.0, 0.16, 12.0))
+	_box("concrete", Vector3(cx, -0.01, -81.1), Vector3(7.2, 0.14, 3.8))
+	for step in range(3):
+		_box("concrete", Vector3(cx, -0.04 + float(step) * 0.05, -83.5 - float(step) * 0.65), Vector3(3.4 + float(step) * 0.5, 0.15, 0.75))
+	_make_home_wall(Vector3(cx, 1.65, -66.0), Vector3(12.0, 3.3, 0.36))
+	_make_home_wall(Vector3(-54.0, 1.65, cz), Vector3(0.36, 3.3, 12.0))
+	_make_home_wall(Vector3(-42.0, 1.65, cz), Vector3(0.36, 3.3, 12.0))
+	# Front wall leaves a proper doorway; the player is not trapped inside a solid shell.
+	_make_home_wall(Vector3(-51.5, 1.65, -78.0), Vector3(5.0, 3.3, 0.36))
+	_make_home_wall(Vector3(-44.5, 1.65, -78.0), Vector3(5.0, 3.3, 0.36))
+	_box("wood", Vector3(-49.0, 1.40, -78.05), Vector3(0.14, 2.8, 0.26))
+	_box("wood", Vector3(-47.0, 1.40, -78.05), Vector3(0.14, 2.8, 0.26))
+	_box("wood_light", Vector3(cx, 2.94, -78.05), Vector3(2.15, 0.18, 0.28))
+	# Front and rear windows.
+	_box("wood", Vector3(-52.5, 1.98, -78.19), Vector3(1.15, 1.1, 0.10))
+	_box("glass", Vector3(-52.5, 1.98, -78.25), Vector3(0.92, 0.85, 0.08))
+	_box("frame", Vector3(-52.5, 1.98, -78.32), Vector3(0.06, 0.85, 0.04))
+	_box("wood", Vector3(-43.5, 1.98, -78.19), Vector3(1.15, 1.1, 0.10))
+	_box("glass", Vector3(-43.5, 1.98, -78.25), Vector3(0.92, 0.85, 0.08))
+	_box("frame", Vector3(-43.5, 1.98, -78.32), Vector3(0.06, 0.85, 0.04))
+	_box("wood", Vector3(-51.7, 2.0, -65.75), Vector3(1.1, 1.0, 0.10))
+	_box("glass", Vector3(-51.7, 2.0, -65.68), Vector3(0.86, 0.78, 0.08))
+	# Everyday living-room props, including a family photograph to inspect.
+	_box("sofa_fabric", Vector3(cx, 0.67, -68.25), Vector3(3.75, 0.86, 1.15))
+	_box("sofa_fabric", Vector3(-49.72, 1.02, -68.35), Vector3(0.36, 0.72, 1.22))
+	_box("sofa_fabric", Vector3(-46.28, 1.02, -68.35), Vector3(0.36, 0.72, 1.22))
+	_box("wood_light", Vector3(cx, 0.51, -72.8), Vector3(1.8, 0.12, 0.95))
+	for leg_x in [-0.72, 0.72]:
+		for leg_z in [-0.32, 0.32]:
+			_box("wood", Vector3(cx + leg_x, 0.27, -72.8 + leg_z), Vector3(0.10, 0.48, 0.10))
+	_box("metal", Vector3(-52.7, 0.92, -71.1), Vector3(0.92, 0.84, 1.25))
+	_box("glass", Vector3(-52.19, 0.96, -71.1), Vector3(0.06, 0.52, 0.91))
+	_box("wood", Vector3(-52.66, 0.42, -71.1), Vector3(1.12, 0.10, 1.4))
+	_box("wood", Vector3(cx, 2.17, -65.78), Vector3(0.90, 0.88, 0.10))
+	_box("photo_paper", Vector3(cx, 2.17, -65.70), Vector3(0.70, 0.68, 0.045))
+	_box("photo_paper", Vector3(-48.22, 2.22, -65.66), Vector3(0.16, 0.16, 0.035))
+	_box("wood", Vector3(-44.0, 0.45, -70.0), Vector3(1.1, 0.10, 0.95))
+	for chair_x in [-44.4, -43.6]:
+		_box("wood", Vector3(chair_x, 0.55, -70.0), Vector3(0.11, 0.7, 0.11))
+	_box("wood", Vector3(-44.0, 0.95, -70.4), Vector3(1.1, 0.65, 0.10))
+	# Roof can hide for interior exploration while retaining a finished exterior silhouette.
+	_home_roof_root = Node3D.new()
+	_home_roof_root.name = "AbrahamHouseRoof"
+	_city_root.add_child(_home_roof_root)
+	_add_individual_box(_home_roof_root, "roof_red", Vector3(cx, 3.65, -75.25), Vector3(13.0, 0.24, 6.7), Vector3(0.28, 0.0, 0.0))
+	_add_individual_box(_home_roof_root, "roof_red", Vector3(cx, 3.65, -68.75), Vector3(13.0, 0.24, 6.7), Vector3(-0.28, 0.0, 0.0))
+	_add_individual_box(_home_roof_root, "concrete", Vector3(cx, 4.25, -72.0), Vector3(0.28, 0.22, 13.4))
+	for fence_x in range(-5, 6):
+		if abs(fence_x) < 2:
+			continue
+		_box("wood_light", Vector3(cx + float(fence_x), 0.48, -86.5), Vector3(0.12, 0.9, 0.12))
+	_box("wood", Vector3(cx, 0.74, -86.5), Vector3(9.8, 0.12, 0.10))
+	_add_static_collision(Vector3(cx, -0.01, cz), Vector3(12.0, 0.16, 12.0))
+	_add_static_collision(Vector3(cx, 1.65, -66.0), Vector3(12.0, 3.3, 0.36))
+	_add_static_collision(Vector3(-54.0, 1.65, cz), Vector3(0.36, 3.3, 12.0))
+	_add_static_collision(Vector3(-42.0, 1.65, cz), Vector3(0.36, 3.3, 12.0))
+	_add_static_collision(Vector3(-51.5, 1.65, -78.0), Vector3(5.0, 3.3, 0.36))
+	_add_static_collision(Vector3(-44.5, 1.65, -78.0), Vector3(5.0, 3.3, 0.36))
+
+func _make_home_wall(position: Vector3, size: Vector3) -> void:
+	_box("wall_cream", position, size)
+	_box("concrete", position + Vector3(0, -size.y * 0.47, 0), Vector3(size.x + 0.08, 0.22, size.z + 0.08))
+
+func _add_static_collision(position: Vector3, size: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.position = position
+	body.name = "StoryLandmarkCollision"
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+	_city_root.add_child(body)
+
+func _add_individual_box(parent: Node3D, material_id: String, position: Vector3, size: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh.material = _materials[material_id]
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.position = position
+	instance.rotation = rotation
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(instance)
+
+func _build_accident_site() -> void:
+	# The wreck is visible for investigation, but no sabotage is confirmed by the scene.
+	var center := Vector3(-144.0, 0.0, 9.6)
+	_box("road_patch", Vector3(-150.5, 0.13, 8.9), Vector3(14.0, 0.025, 0.16), Vector3(0, 0, -0.02))
+	_box("road_patch", Vector3(-151.0, 0.135, 9.5), Vector3(11.0, 0.025, 0.11), Vector3(0, 0, -0.018))
+	_box("car_red", center + Vector3(0, 0.62, 0), Vector3(4.2, 0.82, 1.78), Vector3(0, 0, 0.03))
+	_box("glass", center + Vector3(-0.10, 1.30, 0), Vector3(2.15, 0.82, 1.44), Vector3(0, 0, -0.08))
+	_box("car_red", center + Vector3(1.48, 1.02, 0), Vector3(1.12, 0.26, 1.70), Vector3(0, 0, -0.16))
+	_box("metal", center + Vector3(-1.6, 1.10, 0), Vector3(0.20, 0.22, 1.76), Vector3(0, 0, 0.22))
+	for wheel_x in [-1.3, 1.3]:
+		for wheel_z in [-0.88, 0.88]:
+			_cylinder("tire", center + Vector3(wheel_x, 0.30, wheel_z), Vector3(0.68, 0.45, 0.68), Vector3(0, 0, PI * 0.5))
+			_cylinder("metal_light", center + Vector3(wheel_x, 0.30, wheel_z * 1.02), Vector3(0.34, 0.46, 0.34), Vector3(0, 0, PI * 0.5))
+	for shard in range(22):
+		var offset := Vector3(_rng.randf_range(-5.0, 4.5), 0.14, _rng.randf_range(6.5, 13.0))
+		_box("glass_shards", Vector3(-144.0, 0.0, 0.0) + offset, Vector3(_rng.randf_range(0.06, 0.28), 0.025, _rng.randf_range(0.05, 0.22)), Vector3(0, _rng.randf_range(-0.5, 0.5), _rng.randf_range(-0.6, 0.6)))
+	_add_static_collision(center + Vector3(0, 0.72, 0), Vector3(4.6, 1.85, 2.0))
+
+func _find_player(scene: Node) -> Node3D:
+	if is_instance_valid(_tracked_player):
+		return _tracked_player
+	var candidates := scene.find_children("*", "CharacterBody3D", true, false)
+	for candidate in candidates:
+		if candidate is CharacterBody3D and not candidate.is_ancestor_of(_city_root):
+			_tracked_player = candidate as Node3D
+			_last_player_position = _tracked_player.global_position
+			return _tracked_player
+	return null
+
+func _flat_distance(a: Vector3, b: Vector3) -> float:
+	return Vector2(a.x - b.x, a.z - b.z).length()
+
+func _is_in_home_room(position: Vector3) -> bool:
+	return absf(position.x + 48.0) <= 5.0 and absf(position.z + 72.0) <= 5.0
+
+func _update_story_triggers() -> void:
+	var director := get_node_or_null("/root/MissionDirector")
+	var scene := get_tree().current_scene
+	if director == null or scene == null:
+		return
+	var player := _find_player(scene)
+	if player == null or not is_instance_valid(player):
+		director.call("clear_nearby_interaction")
+		_interaction_key = ""
+		return
+	if player != _tracked_player:
+		_tracked_player = player
+		_last_player_position = player.global_position
+	var moved := _flat_distance(player.global_position, _last_player_position)
+	if moved < 4.0:
+		_walk_distance += moved
+		if _home_interior and _is_in_home_room(player.global_position) and _is_in_home_room(_last_player_position):
+			_home_walk_distance += moved
+	_last_player_position = player.global_position
+	var mission_index := int(director.get("mission_index"))
+	var objective_index := int(director.get("objective_index"))
+	var home_door := Vector3(-48.0, 0.0, -79.5)
+	var garage_door := Vector3(48.0, 0.0, 40.4)
+	var crash_site := Vector3(-144.0, 0.0, 9.6)
+	if mission_index == 0 and objective_index == 0:
+		director.call("complete_objective", "Arrive in Kochi")
+		return
+	if mission_index == 0 and objective_index == 1:
+		if _walk_distance >= 16.0:
+			director.call("complete_objective", "Look around the street")
+		return
+	if mission_index == 0 and objective_index == 2:
+		if _flat_distance(player.global_position, home_door) <= 10.0:
+			director.call("complete_objective", "Find the way to Abraham's house")
+		return
+	if mission_index == 1 and objective_index == 0:
+		if _flat_distance(player.global_position, home_door) <= 4.0:
+			_set_world_interaction(director, "Enter Abraham's house", Callable(self, "_enter_family_home"))
+		else:
+			_clear_world_interaction(director)
+		return
+	if mission_index == 1 and objective_index == 1:
+		if _is_in_home_room(player.global_position) and _home_walk_distance >= 4.5:
+			director.call("complete_objective", "Look around the living room")
+		return
+	if mission_index == 1 and objective_index == 2:
+		if _flat_distance(player.global_position, Vector3(-48.0, 0.0, -65.4)) <= 3.5:
+			_set_world_interaction(director, "Inspect the family photograph", Callable(self, "_inspect_family_photo"))
+		else:
+			_clear_world_interaction(director)
+		return
+	if mission_index == 2 and objective_index == 0:
+		if _home_interior and _flat_distance(player.global_position, home_door) <= 3.2:
+			_set_world_interaction(director, "Leave Abraham's house", Callable(self, "_leave_family_home"))
+		else:
+			_clear_world_interaction(director)
+		return
+	if mission_index == 2 and objective_index == 1:
+		if _flat_distance(player.global_position, garage_door) <= 12.0:
+			director.call("complete_objective", "Find Rafi's garage")
+		return
+	if mission_index == 2 and objective_index == 2:
+		if _flat_distance(player.global_position, garage_door) <= 8.0:
+			_set_world_interaction(director, "Speak to Rafi", Callable(self, "_talk_to_rafi"))
+		else:
+			_clear_world_interaction(director)
+		return
+	if mission_index == 3 and objective_index == 0:
+		if _flat_distance(player.global_position, garage_door) <= 8.0:
+			_set_world_interaction(director, "Ask Rafi about the last drive", Callable(self, "_ask_rafi_about_drive"))
+		else:
+			_clear_world_interaction(director)
+		return
+	if mission_index == 3 and objective_index == 1:
+		if _flat_distance(player.global_position, crash_site) <= 15.0:
+			director.call("complete_objective", "Visit the road where Abraham's car was found")
+		return
+	if mission_index == 3 and objective_index == 2:
+		if _flat_distance(player.global_position, crash_site) <= 6.0:
+			_set_world_interaction(director, "Examine the wreckage", Callable(self, "_inspect_accident_site"))
+		else:
+			_clear_world_interaction(director)
+		return
+	_clear_world_interaction(director)
+
+func _set_world_interaction(director: Node, label: String, action: Callable) -> void:
+	if _interaction_key == label:
+		return
+	_interaction_key = label
+	director.call("set_nearby_interaction", label, action)
+
+func _clear_world_interaction(director: Node) -> void:
+	if _interaction_key != "":
+		_interaction_key = ""
+		director.call("clear_nearby_interaction")
+
+func _enter_family_home() -> void:
+	var player := _find_player(get_tree().current_scene)
+	if player == null:
+		return
+	if player is CharacterBody3D:
+		(player as CharacterBody3D).velocity = Vector3.ZERO
+	player.global_position = Vector3(-48.0, 0.20, -75.5)
+	player.rotation.y = PI
+	_last_player_position = player.global_position
+	_home_walk_distance = 0.0
+	_home_interior = true
+	if is_instance_valid(_home_roof_root):
+		_home_roof_root.visible = false
+	var director := get_node_or_null("/root/MissionDirector")
+	if director:
+		director.call("show_story_line", "Vivek has not been home in years. The silence feels unfamiliar.")
+		director.call("complete_objective", "Enter the family home")
+
+func _leave_family_home() -> void:
+	var player := _find_player(get_tree().current_scene)
+	if player == null:
+		return
+	if player is CharacterBody3D:
+		(player as CharacterBody3D).velocity = Vector3.ZERO
+	player.global_position = Vector3(-48.0, 0.20, -82.0)
+	player.rotation.y = 0.0
+	_last_player_position = player.global_position
+	_home_interior = false
+	if is_instance_valid(_home_roof_root):
+		_home_roof_root.visible = true
+	var director := get_node_or_null("/root/MissionDirector")
+	if director:
+		director.call("show_story_line", "Outside, the neighborhood carries on as if nothing has changed.")
+		director.call("complete_objective", "Leave the house")
+
+func _inspect_family_photo() -> void:
+	var director := get_node_or_null("/root/MissionDirector")
+	if director:
+		director.call("show_story_line", "A family photograph. Abraham looks ordinary, almost distant. It offers no answers.")
+		director.call("complete_objective", "Inspect the photograph near the table")
+
+func _talk_to_rafi() -> void:
+	var director := get_node_or_null("/root/MissionDirector")
+	if director:
+		director.call("show_story_line", "Rafi: Your father didn't talk much about work. I knew the man who came by the garage.")
+		director.call("complete_objective", "Speak to Rafi")
+
+func _ask_rafi_about_drive() -> void:
+	var director := get_node_or_null("/root/MissionDirector")
+	if director:
+		director.call("show_story_line", "Rafi: I heard it was a road accident. I didn't see what happened myself.")
+		director.call("complete_objective", "Listen to what Rafi remembers")
+
+func _inspect_accident_site() -> void:
+	var director := get_node_or_null("/root/MissionDirector")
+	if director:
+		director.call("show_story_line", "Rain has battered the roadside and the wreck. Nothing here proves what happened.")
+		director.call("complete_objective", "Look around the crash site")
 
 func _flush_static_batches() -> void:
 	for key_variant in _batches.keys():
