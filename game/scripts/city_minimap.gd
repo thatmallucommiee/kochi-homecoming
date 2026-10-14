@@ -4,6 +4,7 @@ extends Control
 
 const GRID_SIZE := 96.0
 const MAP_RANGE_METERS := 190.0
+@export var full_city_view := false
 const ROAD_COLOR := Color("#777d7b")
 const ROAD_EDGE := Color("#3b4143")
 const MAP_BACKGROUND := Color("#242b2d")
@@ -89,9 +90,10 @@ func _draw() -> void:
 		return
 	var panel := Rect2(Vector2.ZERO, Vector2(map_size, map_size))
 	draw_rect(panel, MAP_BACKGROUND, true)
-	var inset := 9.0
+	var inset := 9.0 if not full_city_view else 18.0
 	var center := Vector2(map_size * 0.5, map_size * 0.5)
-	var map_scale := (map_size - inset * 2.0) / MAP_RANGE_METERS
+	var view_range := 900.0 if full_city_view else MAP_RANGE_METERS
+	var map_scale := (map_size - inset * 2.0) / view_range
 	var player_pos := Vector3.ZERO
 	if is_instance_valid(_player):
 		player_pos = _player.global_position
