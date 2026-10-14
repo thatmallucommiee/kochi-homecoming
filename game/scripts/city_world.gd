@@ -65,6 +65,7 @@ func _install_city(scene: Node) -> void:
 	_walkers.clear()
 	_sign_count = 0
 	_make_materials()
+	_apply_city_textures()
 	_build_ground_and_roads()
 	_build_buildings()
 	_build_street_life()
@@ -138,6 +139,55 @@ func _make_materials() -> void:
 	_mat("hair", Color("#242321"), 0.95)
 	_mat("pants_dark", Color("#343b43"), 0.9)
 	_mat("pants_blue", Color("#40566d"), 0.9)
+
+func _apply_city_textures() -> void:
+	var shader_resource := load("res://shaders/triplanar_city.gdshader") as Shader
+	if shader_resource == null:
+		push_warning("City surface shader was not available; using fallback flat materials.")
+		return
+	var texture_specs := {
+		"road": {"file": "asphalt.svg", "scale": 0.34, "roughness": 0.96},
+		"road_patch": {"file": "asphalt.svg", "scale": 0.30, "roughness": 0.98},
+		"ground_concrete": {"file": "concrete.svg", "scale": 0.075, "roughness": 0.98},
+		"sidewalk": {"file": "concrete.svg", "scale": 0.14, "roughness": 0.94},
+		"drain": {"file": "concrete.svg", "scale": 0.28, "roughness": 1.0},
+		"wall_cream": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_pale_green": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_sky": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_ochre": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_rose": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_sand": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_white": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_mint": {"file": "plaster.svg", "scale": 0.34, "roughness": 0.92},
+		"wall_gray": {"file": "plaster.svg", "scale": 0.22, "roughness": 0.96},
+		"concrete": {"file": "concrete.svg", "scale": 0.18, "roughness": 0.97},
+		"roof_red": {"file": "terracotta.svg", "scale": 0.38, "roughness": 0.91},
+		"roof_dark": {"file": "concrete.svg", "scale": 0.12, "roughness": 0.92},
+		"wood": {"file": "wood.svg", "scale": 0.20, "roughness": 0.90},
+		"wood_light": {"file": "wood.svg", "scale": 0.24, "roughness": 0.88},
+		"glass": {"file": "glass.svg", "scale": 0.30, "roughness": 0.28}
+	}
+	var loaded_textures: Dictionary = {}
+	for spec_variant in texture_specs.values():
+		var file_path := "res://assets/textures/" + str(spec_variant["file"])
+		if not loaded_textures.has(file_path):
+			loaded_textures[file_path] = load(file_path) as Texture2D
+	for material_variant in texture_specs.keys():
+		var material_id := str(material_variant)
+		var spec: Dictionary = texture_specs[material_id]
+		var base_material := _materials[material_id] as StandardMaterial3D
+		var texture_path := "res://assets/textures/" + str(spec["file"])
+		var surface_texture := loaded_textures.get(texture_path) as Texture2D
+		if base_material == null or surface_texture == null:
+			push_warning("Missing city texture for " + material_id + "; keeping flat fallback.")
+			continue
+		var textured_material := ShaderMaterial.new()
+		textured_material.shader = shader_resource
+		textured_material.set_shader_parameter("surface_tex", surface_texture)
+		textured_material.set_shader_parameter("tint_color", base_material.albedo_color)
+		textured_material.set_shader_parameter("texture_scale", float(spec["scale"]))
+		textured_material.set_shader_parameter("surface_roughness", float(spec["roughness"]))
+		_materials[material_id] = textured_material
 
 func _mat(id: String, color: Color, roughness: float = 0.9, emission: Color = Color.BLACK, emission_energy: float = 0.0) -> void:
 	var material := StandardMaterial3D.new()
