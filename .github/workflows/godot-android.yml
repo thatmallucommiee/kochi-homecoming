@@ -15,6 +15,9 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out game systems and source
+        uses: actions/checkout@v4
+
       - name: Download verified Godot starter
         run: |
           curl -L --fail --retry 3 \
@@ -29,21 +32,24 @@ jobs:
           fi
           echo "GODOT_PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
 
-      - name: Install story mission system
+      - name: Install city and story gameplay systems
         shell: bash
         run: |
           mkdir -p "$GODOT_PROJECT_DIR/scripts"
           cp "$GITHUB_WORKSPACE/game/scripts/mission_director.gd" "$GODOT_PROJECT_DIR/scripts/mission_director.gd"
+          cp "$GITHUB_WORKSPACE/game/scripts/city_world.gd" "$GODOT_PROJECT_DIR/scripts/city_world.gd"
           python3 - "$GODOT_PROJECT_DIR/project.godot" <<'PY'
           import pathlib, sys
           path = pathlib.Path(sys.argv[1])
           data = path.read_text()
           if '[autoload]' not in data:
-              data = data.replace('[application]', '[autoload]\nMissionDirector="*res://scripts/mission_director.gd"\n\n[application]', 1)
-          elif 'MissionDirector=' not in data:
+              data = data.replace('[application]', '[autoload]\n\n[application]', 1)
+          if 'CityWorld=' not in data:
+              data = data.replace('[autoload]', '[autoload]\nCityWorld="*res://scripts/city_world.gd"', 1)
+          if 'MissionDirector=' not in data:
               data = data.replace('[autoload]', '[autoload]\nMissionDirector="*res://scripts/mission_director.gd"', 1)
           path.write_text(data)
-          print("MissionDirector autoload configured.")
+          print("CityWorld and MissionDirector autoloads configured.")
           PY
 
       - name: Set up Godot 4.7.2
