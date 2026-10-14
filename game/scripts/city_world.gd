@@ -9,7 +9,7 @@ const ROAD_HALF := ROAD_WIDTH * 0.5
 const SIDEWALK_WIDTH := 2.2
 const WORLD_EDGE := GRID * 4.0 + 12.0
 const WORLD_SIZE := GRID * 9.0 + 48.0
-const CHUNK_SIZE := GRID * 2.0
+const CHUNK_SIZE := GRID * 3.0
 const CITY_SEED := 20261014
 
 var _rng := RandomNumberGenerator.new()
@@ -602,7 +602,7 @@ func _flush_static_batches() -> void:
 		for i in range(transforms.size()):
 			multimesh.set_instance_transform(i, transforms[i])
 		var instance := MultiMeshInstance3D.new()
-		instance.name = "Batch_%s_%s" % [shape_id, material_id]
+		instance.name = "Batch_%s_%s_%s_%s" % [shape_id, material_id, key.get_slice("|", 2), key.get_slice("|", 3)]
 		instance.multimesh = multimesh
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_city_root.add_child(instance)
