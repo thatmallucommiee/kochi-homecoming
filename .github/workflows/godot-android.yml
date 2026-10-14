@@ -109,6 +109,25 @@ jobs:
           export/android/java_sdk_path = "$JAVA_HOME"
           EDITORSETTINGS
 
+      - name: Enable Android-compatible texture compression
+        shell: bash
+        run: |
+          python3 - "$GODOT_PROJECT_DIR/project.godot" <<'PY'
+          import pathlib, sys
+          path = pathlib.Path(sys.argv[1])
+          data = path.read_text()
+          section = "[rendering]"
+          setting = 'textures/vram_compression/import_etc2_astc=true'
+          if section in data:
+              before, after = data.split(section, 1)
+              if setting not in after.split("\\n[", 1)[0]:
+                  data = before + section + "\\n" + setting + "\\n" + after
+          else:
+              data += "\\n[rendering]\\n" + setting + "\\n"
+          path.write_text(data)
+          print("Enabled ETC2/ASTC texture import for Android.")
+          PY
+
       - name: Import and validate Godot project
         run: godot --headless --editor --path "$GODOT_PROJECT_DIR" --quit
 
