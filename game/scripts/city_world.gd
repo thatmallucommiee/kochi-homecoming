@@ -7,8 +7,8 @@ const GRID := 96.0
 const ROAD_WIDTH := 15.0
 const ROAD_HALF := ROAD_WIDTH * 0.5
 const SIDEWALK_WIDTH := 2.2
-const WORLD_EDGE := GRID * 3.0 + 12.0
-const WORLD_SIZE := GRID * 7.0 + 48.0
+const WORLD_EDGE := GRID * 4.0 + 12.0
+const WORLD_SIZE := GRID * 9.0 + 48.0
 const CITY_SEED := 20261014
 
 var _rng := RandomNumberGenerator.new()
@@ -172,9 +172,9 @@ func _sphere(material_id: String, position: Vector3, size: Vector3, rotation: Ve
 
 func _build_ground_and_roads() -> void:
 	_box("ground_concrete", Vector3(0, -0.43, 0), Vector3(WORLD_SIZE, 0.55, WORLD_SIZE))
-	var extent := GRID * 3.0
-	var road_length := GRID * 6.0 + ROAD_WIDTH
-	for index in range(-3, 4):
+	var extent := GRID * 4.0
+	var road_length := GRID * 8.0 + ROAD_WIDTH
+	for index in range(-4, 5):
 		var line := float(index) * GRID
 		# Continuous asphalt is deliberately joined at intersections.
 		_box("road", Vector3(0, 0.02, line), Vector3(road_length, 0.18, ROAD_WIDTH))
@@ -186,17 +186,17 @@ func _build_ground_and_roads() -> void:
 			_box("drain", Vector3(0, 0.075, line + side * (ROAD_HALF + 0.18)), Vector3(road_length, 0.055, 0.34))
 			_box("drain", Vector3(line + side * (ROAD_HALF + 0.18), 0.075, 0), Vector3(0.34, 0.055, road_length))
 		# Broken white lane dividers and a double yellow center line.
-		for x in range(-42, 43):
+		for x in range(-56, 57):
 			var dash_x := float(x) * 7.1
 			if abs(dash_x) < extent - 4.0:
 				_box("road_white", Vector3(dash_x, 0.119, line + 3.75), Vector3(3.8, 0.018, 0.11))
 				_box("road_white", Vector3(dash_x, 0.119, line - 3.75), Vector3(3.8, 0.018, 0.11))
-		for z in range(-42, 43):
+		for z in range(-56, 57):
 			var dash_z := float(z) * 7.1
 			if abs(dash_z) < extent - 4.0:
 				_box("road_white", Vector3(line + 3.75, 0.12, dash_z), Vector3(0.11, 0.018, 3.8))
 				_box("road_white", Vector3(line - 3.75, 0.12, dash_z), Vector3(0.11, 0.018, 3.8))
-		for dash in range(-42, 43):
+		for dash in range(-56, 57):
 			var mark_x := float(dash) * 7.1
 			if abs(mark_x) < extent - 4.0:
 				_box("road_yellow", Vector3(mark_x, 0.122, line - 0.20), Vector3(3.5, 0.02, 0.10))
@@ -228,8 +228,8 @@ func _nearest_grid_distance(value: float) -> float:
 func _build_buildings() -> void:
 	# Building rows sit along both sides of every street, making a dense connected grid.
 	for axis in [0, 1]:
-		for road_index in range(-3, 4):
-			for segment in range(-3, 3):
+		for road_index in range(-4, 5):
+			for segment in range(-4, 4):
 				for side in [-1, 1]:
 					var central := abs(road_index) <= 1 and abs(segment) <= 2
 					var count := 2 if central else 1
@@ -262,8 +262,8 @@ func _build_buildings() -> void:
 							kind = "apartment"
 						_make_building(position, frontage, depth, floors, face, wall_id, kind)
 	# Fill the center of blocks with workshops, small homes and courtyards.
-	for gx in range(-3, 3):
-		for gz in range(-3, 3):
+	for gx in range(-4, 4):
+		for gz in range(-4, 4):
 			if _rng.randf() < 0.22:
 				continue
 			var cx := (float(gx) + 0.5) * GRID + _rng.randf_range(-9.0, 9.0)
@@ -437,31 +437,31 @@ func _add_building_collision(center: Vector3, size: Vector3) -> void:
 
 func _build_trees_and_verges() -> void:
 	# Roadside lamps and power poles: clustered props, with a handful of overhead cables.
-	for road_index in range(-3, 4):
+	for road_index in range(-4, 5):
 		var line := float(road_index) * GRID
 		for along_index in range(-8, 9):
-			var along := float(along_index) * 36.0
+			var along := float(along_index) * 45.0
 			if abs(along) > WORLD_EDGE - 20:
 				continue
 			for side in [-1.0, 1.0]:
-				var x_road_pole := Vector3(along, 0, line + side * 9.8)
+				var x_road_pole := Vector3(along, 0, line + side * 9.2)
 				_cylinder("metal", x_road_pole + Vector3(0, 4.0, 0), Vector3(0.20, 8.0, 0.20))
 				_box("metal", x_road_pole + Vector3(0.75, 7.6, 0), Vector3(1.6, 0.12, 0.12))
 				_sphere("lamp_glow", x_road_pole + Vector3(1.45, 7.45, 0), Vector3(0.32, 0.18, 0.24))
-				var z_road_pole := Vector3(line + side * 9.8, 0, along)
+				var z_road_pole := Vector3(line + side * 9.2, 0, along)
 				_cylinder("metal", z_road_pole + Vector3(0, 4.0, 0), Vector3(0.20, 8.0, 0.20))
 				_box("metal", z_road_pole + Vector3(0, 7.6, 0.75), Vector3(0.12, 0.12, 1.6))
 				_sphere("lamp_glow", z_road_pole + Vector3(0, 7.45, 1.45), Vector3(0.24, 0.18, 0.32))
 		# Three overhead lines on each road; keep cable instances light-weight.
-		for seg in range(-3, 3):
+		for seg in range(-4, 4):
 			for wire in range(3):
 				var wire_height := 8.4 + float(wire) * 0.32
-				var wire_z := line + 9.8 + float(wire) * 0.10
+				var wire_z := line + 9.2 + float(wire) * 0.10
 				_box("cable", Vector3((float(seg) + 0.5) * GRID, wire_height, wire_z), Vector3(GRID, 0.045, 0.045))
-				var wire_x := line + 9.8 + float(wire) * 0.10
+				var wire_x := line + 9.2 + float(wire) * 0.10
 				_box("cable", Vector3(wire_x, wire_height, (float(seg) + 0.5) * GRID), Vector3(0.045, 0.045, GRID))
 	# Palms and broad-leaf trees at block corners and near the outer roads.
-	for i in range(58):
+	for i in range(96):
 		var x := _rng.randf_range(-WORLD_EDGE + 8, WORLD_EDGE - 8)
 		var z := _rng.randf_range(-WORLD_EDGE + 8, WORLD_EDGE - 8)
 		if _nearest_grid_distance(x) < ROAD_HALF + 4.5 or _nearest_grid_distance(z) < ROAD_HALF + 4.5:
@@ -471,7 +471,7 @@ func _build_trees_and_verges() -> void:
 		else:
 			_add_broad_tree(Vector3(x, 0, z), _rng.randf_range(3.5, 5.2))
 	# Puddles sit off the driving lanes, catching the gray Kerala daylight.
-	for p in range(42):
+	for p in range(64):
 		var x := _rng.randf_range(-WORLD_EDGE + 3, WORLD_EDGE - 3)
 		var z := _rng.randf_range(-WORLD_EDGE + 3, WORLD_EDGE - 3)
 		if _nearest_grid_distance(x) < ROAD_HALF - 1.0 and _nearest_grid_distance(z) < ROAD_HALF - 1.0:
@@ -497,7 +497,7 @@ func _build_street_life() -> void:
 	# Bus shelters, small stalls, waste bins and roadside notice boards.
 	for i in range(-2, 3):
 		var x := float(i) * GRID + 22.0
-		var z := -GRID * 2.0 - GRID * 0.5
+		var z := -GRID * 4.0 + ROAD_HALF + SIDEWALK_WIDTH * 0.5
 		_box("metal", Vector3(x, 1.4, z), Vector3(5.0, 0.16, 2.2))
 		for post_x in [-2.2, 2.2]:
 			for post_z in [-0.8, 0.8]:
@@ -639,7 +639,7 @@ func _build_traffic() -> void:
 	var body_colors := ["car_white", "car_silver", "car_blue", "car_red", "car_green", "car_black"]
 	for i in range(7):
 		var axis := 0 if i < 5 else 1
-		var line := float(_rng.randi_range(-2, 2)) * GRID
+		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var direction := 1.0 if i % 2 == 0 else -1.0
 		var lane := ROAD_HALF * 0.43 * (1.0 if direction > 0 else -1.0)
 		var coordinate := -WORLD_EDGE + float(i) * 72.0 + _rng.randf_range(0.0, 28.0)
@@ -650,7 +650,7 @@ func _build_traffic() -> void:
 		_traffic.append({"root": root, "axis": axis, "line": line, "lane": lane, "direction": direction, "speed": _rng.randf_range(6.0, 10.5)})
 	for i in range(4):
 		var axis := 0 if i < 2 else 1
-		var line := float(_rng.randi_range(-2, 2)) * GRID
+		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var direction := -1.0 if i % 2 == 0 else 1.0
 		var lane := ROAD_HALF * 0.18 * (1.0 if direction > 0 else -1.0)
 		var coordinate := float(i) * 125.0 - 210.0
@@ -762,7 +762,7 @@ func _build_pedestrians() -> void:
 	var shirts := ["shirt_blue", "shirt_white", "shirt_green", "shirt_maroon", "shirt_ochre"]
 	for i in range(14):
 		var axis := 0 if i < 8 else 1
-		var line := float(_rng.randi_range(-2, 2)) * GRID
+		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var side := 1.0 if i % 2 == 0 else -1.0
 		var lane := side * (ROAD_HALF + SIDEWALK_WIDTH * 0.43)
 		var coordinate := _rng.randf_range(-WORLD_EDGE + 5, WORLD_EDGE - 5)
