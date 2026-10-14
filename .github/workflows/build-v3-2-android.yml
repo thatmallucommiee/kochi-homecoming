@@ -1,0 +1,92 @@
+name: Build Kochi Homecoming Android APK
+
+on:
+  push:
+    branches:
+      - build-v3-2-android
+    paths:
+      - 'kochi-source-v3.2.tar.xz.b64.part*'
+      - '.github/workflows/build-v3-2-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android-export:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - name: Checkout build branch
+        uses: actions/checkout@v4
+
+      - name: Assemble v3.2 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/source"
+          cat kochi-source-v3.2.tar.xz.b64.part* | base64 --decode | tar -xJ -C "$GITHUB_WORKSPACE/source"
+          test -f "$GITHUB_WORKSPACE/source/project.godot"
+          echo "PROJECT_DIR=$GITHUB_WORKSPACE/source" >> "$GITHUB_ENV"
+
+      - name: Run static and drivetrain checks
+        shell: bash
+        run: |
+          cd "$PROJECT_DIR"
+          python3 tools/validate_source.py
+          python3 tools/test_drivetrain.py
+
+      - name: Import and parse project with Godot
+        shell: bash
+        run: godot --headless --editor --path "$PROJECT_DIR" --quit
+
+      - name: Export Android debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/out/Kochi-Homecoming-v0.3.2-debug.apk"
+          test -s "$GITHUB_WORKSPACE/out/Kochi-Homecoming-v0.3.2-debug.apk"
+          unzip -t "$GITHUB_WORKSPACE/out/Kochi-Homecoming-v0.3.2-debug.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kochi-Homecoming-v0.3.2-debug-apk
+          path: out/Kochi-Homecoming-v0.3.2-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish downloadable prerelease
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: kochi-homecoming-v0.3.2-build-${{ github.run_number }}
+          name: Kochi: Homecoming v0.3.2 Android debug build
+          prerelease: true
+          generate_release_notes: true
+          files: out/Kochi-Homecoming-v0.3.2-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Record build outcome
+        if: always()
+        shell: bash
+        env:
+          BUILD_STATUS: ${{ job.status }}
+        run: |
+          set +e
+          mkdir -p build-results
+          {
+            echo "workflow_run_id=$GITHUB_RUN_ID"
+            echo "workflow_run_number=$GITHUB_RUN_NUMBER"
+            echo "status=$BUILD_STATUS"
+            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "apk_release_tag=kochi-homecoming-v0.3.2-build-$GITHUB_RUN_NUMBER"
+          } > build-results/latest.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build-results/latest.txt
+          git commit -m "Record v3.2 Android build result" || exit 0
+          git push origin "HEAD:$GITHUB_REF_NAME"
