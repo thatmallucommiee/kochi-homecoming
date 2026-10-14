@@ -15,31 +15,98 @@ jobs:
           curl -L --fail --retry 3 \
             "https://d2ol7oe51mr4n9.cloudfront.net/user_3GFMUlqUCQDFIBIgncSeA0HMz2O/f68d3d84-3d19-48a8-a955-45055232e9e1.zip" \
             -o /tmp/kochi-godot.zip
-          mkdir -p godot_project
-          unzip -q /tmp/kochi-godot.zip -d godot_project
-          find godot_project -name project.godot -print
-
-      - name: Locate Godot project
-        id: project
-        run: |
+          mkdir -p "$GITHUB_WORKSPACE/godot_project"
+          unzip -q /tmp/kochi-godot.zip -d "$GITHUB_WORKSPACE/godot_project"
           PROJECT_FILE="$(find "$GITHUB_WORKSPACE/godot_project" -name project.godot -print -quit)"
           if [ -z "$PROJECT_FILE" ]; then
             echo "project.godot was not found in the starter archive" >&2
             exit 1
           fi
-          echo "path=$(dirname "$PROJECT_FILE")" >> "$GITHUB_OUTPUT"
+          echo "GODOT_PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
 
-      - name: Set up Godot
+      - name: Set up Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.7.2
           use-dotnet: false
 
-      - name: Validate project
-        run: godot --headless --editor --path "${{ steps.project.outputs.path }}" --quit
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
-      - name: Report Android export status
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Godot Android export templates
+        shell: bash
         run: |
-          echo "The starter project has been imported and validated."
-          echo "An Android APK export requires a configured Android export preset and matching SDK/templates."
-          echo "This workflow intentionally stops before claiming an APK exists until those prerequisites are verified."
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          curl -L --fail --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz" \
+            -o /tmp/godot-templates.tpz
+          mkdir -p /tmp/godot-templates
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
+          cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+          test -s "$HOME/.local/share/godot/export_templates/4.7.2.stable/android_debug.apk"
+          test -s "$HOME/.local/share/godot/export_templates/4.7.2.stable/android_release.apk"
+
+      - name: Configure Android export preset
+        shell: bash
+        run: |
+          mkdir -p "$GODOT_PROJECT_DIR"
+          cat > "$GODOT_PROJECT_DIR/export_presets.cfg" <<'PRESET'
+          [preset.0]
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/kochihomecoming-debug.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+
+          [preset.0.options]
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          gradle_build/export_format=0
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          version/code=1
+          version/name="0.1.0"
+          package/unique_name="com.aswinmohan.kochihomecoming"
+          package/name="Kochi Homecoming"
+          package/signed=true
+          screen/immersive_mode=true
+          screen/orientation=1
+          PRESET
+          mkdir -p "$GODOT_PROJECT_DIR/build"
+          keytool -genkeypair -v -keystore "$HOME/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/debug.keystore" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
+
+      - name: Import and validate Godot project
+        run: godot --headless --editor --path "$GODOT_PROJECT_DIR" --quit
+
+      - name: Export debug APK
+        run: |
+          godot --headless --path "$GODOT_PROJECT_DIR" --export-debug "Android" "$GODOT_PROJECT_DIR/build/kochihomecoming-debug.apk"
+          test -s "$GODOT_PROJECT_DIR/build/kochihomecoming-debug.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kochi-Homecoming-Godot-APK
+          path: ${{ env.GODOT_PROJECT_DIR }}/build/kochihomecoming-debug.apk
+          if-no-files-found: error
+          retention-days: 14
