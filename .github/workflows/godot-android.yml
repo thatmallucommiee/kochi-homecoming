@@ -54,6 +54,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/game/scripts/city_world.gd" "$GODOT_PROJECT_DIR/scripts/city_world.gd"
           cp "$GITHUB_WORKSPACE/game/scripts/city_minimap.gd" "$GODOT_PROJECT_DIR/scripts/city_minimap.gd"
           cp "$GITHUB_WORKSPACE/game/scripts/driving_system.gd" "$GODOT_PROJECT_DIR/scripts/driving_system.gd"
+          python3 "$GITHUB_WORKSPACE/game/tools/patch_starter.py" "$GODOT_PROJECT_DIR" "$GITHUB_WORKSPACE/game/scripts/player.gd" "$GITHUB_WORKSPACE/game/scripts/vivek_model.gd"
           mkdir -p "$GODOT_PROJECT_DIR/assets/textures" "$GODOT_PROJECT_DIR/shaders"
           cp "$GITHUB_WORKSPACE/game/assets/textures/"*.svg "$GODOT_PROJECT_DIR/assets/textures/"
           cp "$GITHUB_WORKSPACE/game/shaders/triplanar_city.gdshader" "$GODOT_PROJECT_DIR/shaders/triplanar_city.gdshader"
