@@ -430,7 +430,7 @@ func _make_building(center: Vector3, frontage_width: float, depth: float, floors
 				_add_balcony(center, face, u, y - 0.15, win_width + 0.65, building_depth)
 	# AC units, roof tanks, aerials and laundry-like details.
 	if floors >= 2 and _rng.randf() < 0.7:
-		var ac_pos := _face_position(center, (face + 2) % 4, building_depth * 0.5 + 0.23, min(total_height - 0.8, 5.3))
+		var ac_pos := _face_position(center, (face + 2) % 4, building_depth * 0.5 + 0.23, minf(total_height - 0.8, 5.3))
 		_box("metal_light", ac_pos, Vector3(1.05, 0.72, 0.55) if face < 2 else Vector3(0.55, 0.72, 1.05))
 	if floors >= 2 and _rng.randf() < 0.44:
 		_cylinder("metal", center + Vector3(sx * 0.22, total_height + 0.85, sz * 0.18), Vector3(1.0, 1.65, 1.0))
@@ -1200,19 +1200,19 @@ func _build_idle_citizens() -> void:
 	rafi.position = Vector3(51.0, 0.17, 36.0)
 	rafi.rotation.y = PI
 	_city_root.add_child(rafi)
-	_add_citizen_collision(rafi.global_position, 0.30, 1.75)
+	_add_citizen_collision(rafi.position, 0.30, 1.75)
 	var tea_customer_a := _spawn_pedestrian("shirt_white", "pants_blue")
 	tea_customer_a.name = "TeaStallCustomerA"
 	tea_customer_a.position = Vector3(-44.0, 0.17, 42.0)
 	tea_customer_a.rotation.y = -PI * 0.5
 	_city_root.add_child(tea_customer_a)
-	_add_citizen_collision(tea_customer_a.global_position, 0.30, 1.75)
+	_add_citizen_collision(tea_customer_a.position, 0.30, 1.75)
 	var tea_customer_b := _spawn_pedestrian("shirt_maroon", "pants_dark")
 	tea_customer_b.name = "TeaStallCustomerB"
 	tea_customer_b.position = Vector3(-52.0, 0.17, 41.5)
 	tea_customer_b.rotation.y = PI * 0.5
 	_city_root.add_child(tea_customer_b)
-	_add_citizen_collision(tea_customer_b.global_position, 0.30, 1.75)
+	_add_citizen_collision(tea_customer_b.position, 0.30, 1.75)
 	# Several quiet street-side figures and one vendor near a corner shop.
 	for i in range(5):
 		var citizen := _spawn_pedestrian("shirt_ochre" if i % 2 == 0 else "shirt_blue", "pants_dark")
