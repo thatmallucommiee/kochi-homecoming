@@ -79,5 +79,22 @@ new = '''\tfunc _process(_delta: float) -> void:
 if old not in game:
     raise SystemExit("Could not safely locate joystick _process() to fix release handling")
 game = game.replace(old, new)
+# Route the starter's on-screen INTERACT button into the real mission system.
+interact_start = game.find("func _interact() -> void:")
+interact_end = game.find("func _add_box(", interact_start)
+if interact_start < 0 or interact_end < 0:
+    raise SystemExit("Could not safely locate starter _interact() handler")
+interact_replacement = '''func _interact() -> void:
+	if not started:
+		return
+	var director := get_node_or_null("/root/MissionDirector")
+	if director != null:
+		director.call("interact")
+	else:
+		hint_label.text = "Nothing to interact with nearby."
+
+'''
+game = game[:interact_start] + interact_replacement + game[interact_end:]
+
 game_path.write_text(game)
-print("Applied corrected camera-relative movement, joystick release handling, and articulated Vivek model.")
+print("Applied corrected movement, joystick release, articulated Vivek, and mission interaction wiring.")
