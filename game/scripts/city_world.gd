@@ -236,12 +236,12 @@ func _build_buildings() -> void:
 					if abs(road_index) == 3 and abs(segment) == 2 and _rng.randf() < 0.45:
 						continue
 					for slot in range(count):
-						var gap := GRID / float(count)
-						var along := float(segment) * GRID + (float(slot) + 0.5) * gap
-						var frontage := gap - _rng.randf_range(5.0, 10.0)
-						if count == 1:
-							frontage = _rng.randf_range(28.0, 48.0)
-						frontage = clamp(frontage, 17.0, 43.0)
+						var along := float(segment) * GRID + GRID * 0.5
+						var frontage := _rng.randf_range(27.0, 35.0)
+						if count == 2:
+							along = float(segment) * GRID + (37.0 if slot == 0 else 59.0)
+							frontage = _rng.randf_range(15.0, 19.0)
+						frontage = clamp(frontage, 14.0, 36.0)
 						var depth := _rng.randf_range(13.0, 22.0)
 						var floors := _choose_floors(road_index, segment, axis)
 						var face := 0
@@ -254,6 +254,8 @@ func _build_buildings() -> void:
 							var road_x := float(road_index) * GRID
 							position = Vector3(road_x + side * (ROAD_HALF + SIDEWALK_WIDTH + depth * 0.5 + 0.45), 0, along)
 							face = 2 if side > 0 else 3
+						if _reserved_for_landmark(position):
+							continue
 						var wall_id: String = HOUSE_PALETTE[_rng.randi_range(0, HOUSE_PALETTE.size() - 1)]
 						var kind := "shop" if central or (_rng.randf() < 0.22) else "residential"
 						if floors >= 4:
@@ -266,12 +268,22 @@ func _build_buildings() -> void:
 				continue
 			var cx := (float(gx) + 0.5) * GRID + _rng.randf_range(-9.0, 9.0)
 			var cz := (float(gz) + 0.5) * GRID + _rng.randf_range(-9.0, 9.0)
+			if _reserved_for_landmark(Vector3(cx, 0, cz)):
+				continue
 			var width := _rng.randf_range(12.0, 21.0)
 			var depth := _rng.randf_range(10.0, 17.0)
 			var face := _rng.randi_range(0, 3)
 			var wall_id: String = HOUSE_PALETTE[_rng.randi_range(0, HOUSE_PALETTE.size() - 1)]
 			_make_building(Vector3(cx, 0, cz), width, depth, _rng.randi_range(1, 2), face, wall_id, "yard")
 	_build_trees_and_verges()
+
+func _reserved_for_landmark(position: Vector3) -> bool:
+	# Keep the dedicated garage and tea stall lots clear so frontages do not overlap them.
+	if position.distance_to(Vector3(48.0, 0.0, 48.0)) < 21.0:
+		return true
+	if position.distance_to(Vector3(-48.0, 0.0, 48.0)) < 13.0:
+		return true
+	return false
 
 func _choose_floors(road_index: int, segment: int, axis: int) -> int:
 	var center_weight := abs(road_index) <= 1 and abs(segment) <= 1
@@ -432,11 +444,11 @@ func _build_trees_and_verges() -> void:
 			if abs(along) > WORLD_EDGE - 20:
 				continue
 			for side in [-1.0, 1.0]:
-				var x_road_pole := Vector3(along, 0, line + side * 6.4)
+				var x_road_pole := Vector3(along, 0, line + side * 9.8)
 				_cylinder("metal", x_road_pole + Vector3(0, 4.0, 0), Vector3(0.20, 8.0, 0.20))
 				_box("metal", x_road_pole + Vector3(0.75, 7.6, 0), Vector3(1.6, 0.12, 0.12))
 				_sphere("lamp_glow", x_road_pole + Vector3(1.45, 7.45, 0), Vector3(0.32, 0.18, 0.24))
-				var z_road_pole := Vector3(line + side * 6.4, 0, along)
+				var z_road_pole := Vector3(line + side * 9.8, 0, along)
 				_cylinder("metal", z_road_pole + Vector3(0, 4.0, 0), Vector3(0.20, 8.0, 0.20))
 				_box("metal", z_road_pole + Vector3(0, 7.6, 0.75), Vector3(0.12, 0.12, 1.6))
 				_sphere("lamp_glow", z_road_pole + Vector3(0, 7.45, 1.45), Vector3(0.24, 0.18, 0.32))
@@ -444,9 +456,9 @@ func _build_trees_and_verges() -> void:
 		for seg in range(-3, 3):
 			for wire in range(3):
 				var wire_height := 8.4 + float(wire) * 0.32
-				var wire_z := line + 6.4 + float(wire) * 0.10
+				var wire_z := line + 9.8 + float(wire) * 0.10
 				_box("cable", Vector3((float(seg) + 0.5) * GRID, wire_height, wire_z), Vector3(GRID, 0.045, 0.045))
-				var wire_x := line + 6.4 + float(wire) * 0.10
+				var wire_x := line + 9.8 + float(wire) * 0.10
 				_box("cable", Vector3(wire_x, wire_height, (float(seg) + 0.5) * GRID), Vector3(0.045, 0.045, GRID))
 	# Palms and broad-leaf trees at block corners and near the outer roads.
 	for i in range(58):
@@ -485,7 +497,7 @@ func _build_street_life() -> void:
 	# Bus shelters, small stalls, waste bins and roadside notice boards.
 	for i in range(-2, 3):
 		var x := float(i) * GRID + 22.0
-		var z := -GRID * 2.0 - 10.0
+		var z := -GRID * 2.0 - GRID * 0.5
 		_box("metal", Vector3(x, 1.4, z), Vector3(5.0, 0.16, 2.2))
 		for post_x in [-2.2, 2.2]:
 			for post_z in [-0.8, 0.8]:
@@ -513,10 +525,10 @@ func _build_street_life() -> void:
 
 func _build_landmarks() -> void:
 	# An identifiable garage district anchor for future real interaction triggers.
-	_box("concrete", Vector3(15.0, 0.10, 23.0), Vector3(30.0, 0.20, 22.0))
-	_box("wall_gray", Vector3(15.0, 2.0, 31.0), Vector3(22.0, 4.0, 0.5))
-	_box("roof_dark", Vector3(15.0, 4.2, 31.0), Vector3(23.0, 0.35, 0.8))
-	_box("sign_blue", Vector3(15.0, 3.0, 30.67), Vector3(13.0, 0.9, 0.12))
+	_box("concrete", Vector3(48.0, 0.10, 48.0), Vector3(28.0, 0.20, 17.0))
+	_box("wall_gray", Vector3(48.0, 2.0, 56.0), Vector3(26.0, 4.0, 0.5))
+	_box("roof_dark", Vector3(48.0, 4.2, 48.0), Vector3(28.0, 0.35, 18.0))
+	_box("sign_blue", Vector3(48.0, 3.0, 55.67), Vector3(13.0, 0.9, 0.12))
 	var garage_label := Label3D.new()
 	garage_label.name = "RafiGarageSign"
 	garage_label.text = "RAFI AUTO WORKS"
@@ -524,24 +536,24 @@ func _build_landmarks() -> void:
 	garage_label.pixel_size = 0.012
 	garage_label.outline_size = 5
 	garage_label.modulate = Color("#fff0d2")
-	garage_label.position = Vector3(15.0, 2.72, 30.55)
+	garage_label.position = Vector3(48.0, 2.72, 55.55)
 	garage_label.rotation.y = PI
 	_city_root.add_child(garage_label)
 	# Garage shutter and bays.
 	for bay in range(2):
-		_box("metal", Vector3(10.0 + float(bay) * 10.0, 1.45, 30.64), Vector3(8.5, 2.75, 0.18))
+		_box("metal", Vector3(42.0 + float(bay) * 12.0, 1.45, 55.64), Vector3(10.5, 2.75, 0.18))
 		for rib in range(7):
-			_box("metal_light", Vector3(10.0 + float(bay) * 10.0, 0.35 + float(rib) * 0.34, 30.52), Vector3(8.2, 0.035, 0.06))
+			_box("metal_light", Vector3(42.0 + float(bay) * 12.0, 0.35 + float(rib) * 0.34, 55.52), Vector3(10.2, 0.035, 0.06))
 	# A simple tea stall opposite the junction creates a recognisable street-life cue.
-	_box("wall_ochre", Vector3(-16.0, 1.5, 18.0), Vector3(8.5, 3.0, 7.0))
-	_box("roof_red", Vector3(-16.0, 3.25, 18.0), Vector3(9.2, 0.3, 7.6))
-	_box("sign_red", Vector3(-16.0, 2.65, 14.45), Vector3(6.7, 0.55, 0.18))
+	_box("wall_ochre", Vector3(-48.0, 1.5, 48.0), Vector3(8.5, 3.0, 7.0))
+	_box("roof_red", Vector3(-48.0, 3.25, 48.0), Vector3(9.2, 0.3, 7.6))
+	_box("sign_red", Vector3(-48.0, 2.65, 44.45), Vector3(6.7, 0.55, 0.18))
 	var tea_label := Label3D.new()
 	tea_label.text = "CHAYA KADA"
 	tea_label.font_size = 42
 	tea_label.pixel_size = 0.010
 	tea_label.outline_size = 4
-	tea_label.position = Vector3(-16.0, 2.45, 14.31)
+	tea_label.position = Vector3(-48.0, 2.45, 44.31)
 	tea_label.rotation.y = 0.0
 	tea_label.modulate = Color("#fff0d2")
 	_city_root.add_child(tea_label)
