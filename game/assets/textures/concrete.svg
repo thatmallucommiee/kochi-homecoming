@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<rect width="512" height="512" fill="#f1f0eb"/>
+<pattern id="slabs" width="128" height="128" patternUnits="userSpaceOnUse">
+<rect width="128" height="128" fill="#f1f0eb"/>
+<path d="M0 1H128 M1 0V128" stroke="#bcbcb5" stroke-width="3" opacity=".8"/>
+<path d="M5 7L61 4 M70 16l45 -2 M14 62l35 -4 M78 83l38 -3 M13 106l52 -5" stroke="#d2d1cb" stroke-width="2" opacity=".65"/>
+<path d="M38 31l9 -3 3 4 -7 4z M92 46l12 -3 3 5 -10 3z M27 90l7 -2 3 4 -7 3z M88 111l8 -3 4 5 -8 2z M51 119l4 -2" fill="#c1c0b9" opacity=".6"/>
+<circle cx="18" cy="22" r="1.2" fill="#b6b5af"/><circle cx="66" cy="47" r="1.3" fill="#c5c4be"/><circle cx="113" cy="71" r="1.4" fill="#b9b9b2"/><circle cx="61" cy="97" r="1" fill="#aaa9a3"/>
+</pattern>
+<rect width="512" height="512" fill="url(#slabs)"/>
+</svg>
