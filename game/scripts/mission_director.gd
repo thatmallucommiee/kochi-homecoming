@@ -101,6 +101,14 @@ func _build_hud() -> void:
 	hint_label.add_theme_font_size_override("font_size", 16)
 	root.add_child(hint_label)
 
+	var interact_button := Button.new()
+	interact_button.text = "INTERACT"
+	interact_button.custom_minimum_size = Vector2(150, 58)
+	interact_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	interact_button.position = Vector2(-178, -88)
+	interact_button.pressed.connect(interact)
+	root.add_child(interact_button)
+
 	toast_label = Label.new()
 	toast_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	toast_label.position = Vector2(-240, 150)
