@@ -68,6 +68,6 @@ func _input(event: InputEvent) -> void:
 		yaw -= delta_pos.x * 0.004
 		pitch = clampf(pitch - delta_pos.y * 0.003, -0.55, 0.15)
 		if camera_pivot:
-			camera_pivot.rotation.y = yaw
+			camera_pivot.rotation.y = wrapf(yaw - rotation.y, -PI, PI)
 		if camera:
 			camera.rotation.x = pitch
