@@ -311,7 +311,7 @@ func _build_buildings() -> void:
 		for road_index in range(-4, 5):
 			for segment in range(-4, 4):
 				for side in [-1, 1]:
-					var central := abs(road_index) <= 1 and abs(segment) <= 2
+					var central: bool = abs(road_index) <= 1 and abs(segment) <= 2
 					var count := 2 if central else 1
 					if abs(road_index) == 3 and abs(segment) == 2 and _rng.randf() < 0.45:
 						continue
@@ -370,7 +370,7 @@ func _reserved_for_landmark(position: Vector3) -> bool:
 	return false
 
 func _choose_floors(road_index: int, segment: int, axis: int) -> int:
-	var center_weight := abs(road_index) <= 1 and abs(segment) <= 1
+	var center_weight: bool = abs(road_index) <= 1 and abs(segment) <= 1
 	if center_weight:
 		return _rng.randi_range(2, 5)
 	if abs(road_index) <= 1 or abs(segment) <= 1:
@@ -380,10 +380,10 @@ func _choose_floors(road_index: int, segment: int, axis: int) -> int:
 	return _rng.randi_range(1, 3)
 
 func _make_building(center: Vector3, frontage_width: float, depth: float, floors: int, face: int, wall_id: String, kind: String) -> void:
-	var width := clamp(frontage_width, 14.0, 46.0)
-	var building_depth := clamp(depth, 11.0, 24.0)
-	var sx := width if face < 2 else building_depth
-	var sz := building_depth if face < 2 else width
+	var width: float = clampf(frontage_width, 14.0, 46.0)
+	var building_depth: float = clampf(depth, 11.0, 24.0)
+	var sx: float = width if face < 2 else building_depth
+	var sz: float = building_depth if face < 2 else width
 	var total_height := 2.8 + float(floors) * 2.75
 	var shell_size := Vector3(sx, total_height, sz)
 	_box(wall_id, center + Vector3(0, total_height * 0.5, 0), shell_size)
@@ -407,7 +407,7 @@ func _make_building(center: Vector3, frontage_width: float, depth: float, floors
 	if shop_front:
 		_add_facade_panel(center, face, width * 0.78, 1.9, 1.72, building_depth, "glass")
 		_add_facade_panel(center, face, width * 0.82, 0.20, 2.82, building_depth, "metal")
-		var awning_id := ["awning", "awning_green", "awning_blue"][_rng.randi_range(0, 2)]
+		var awning_id: String = ["awning", "awning_green", "awning_blue"][_rng.randi_range(0, 2)]
 		var awning_pos := _face_position(center, face, building_depth * 0.5 + 0.62, 3.05)
 		var awning_size := Vector3(width * 0.88, 0.26, 1.05) if face < 2 else Vector3(1.05, 0.26, width * 0.88)
 		_box(awning_id, awning_pos, awning_size)
@@ -421,10 +421,10 @@ func _make_building(center: Vector3, frontage_width: float, depth: float, floors
 	# Upper floors get repeated dark windows, pale frames, and occasional balconies.
 	for floor in range(1, floors):
 		var y := 2.95 + float(floor) * 2.75
-		var window_count := clamp(int(width / 5.5), 2, 5)
+		var window_count: int = clampi(int(width / 5.5), 2, 5)
 		for wi in range(window_count):
-			var u := (float(wi) - float(window_count - 1) * 0.5) * (width / float(window_count))
-			var win_width := min(1.55, width / float(window_count) * 0.48)
+			var u: float = (float(wi) - float(window_count - 1) * 0.5) * (width / float(window_count))
+			var win_width: float = minf(1.55, width / float(window_count) * 0.48)
 			_add_window(center, face, u, y, win_width, 1.22, building_depth)
 			if kind == "apartment" and _rng.randf() < 0.56:
 				_add_balcony(center, face, u, y - 0.15, win_width + 0.65, building_depth)
