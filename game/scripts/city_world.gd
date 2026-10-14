@@ -694,8 +694,8 @@ func _setup_lighting(scene: Node) -> void:
 
 func _build_traffic() -> void:
 	var body_colors := ["car_white", "car_silver", "car_blue", "car_red", "car_green", "car_black"]
-	for i in range(7):
-		var axis := 0 if i < 5 else 1
+	for i in range(14):
+		var axis := 0 if i % 2 == 0 else 1
 		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var direction := 1.0 if i % 2 == 0 else -1.0
 		var lane := ROAD_HALF * 0.43 * (1.0 if direction > 0 else -1.0)
@@ -705,8 +705,8 @@ func _build_traffic() -> void:
 		root.position = pos
 		_city_root.add_child(root)
 		_traffic.append({"root": root, "axis": axis, "line": line, "lane": lane, "direction": direction, "speed": _rng.randf_range(6.0, 10.5)})
-	for i in range(4):
-		var axis := 0 if i < 2 else 1
+	for i in range(7):
+		var axis := 0 if i % 2 == 0 else 1
 		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var direction := -1.0 if i % 2 == 0 else 1.0
 		var lane := ROAD_HALF * 0.18 * (1.0 if direction > 0 else -1.0)
@@ -716,10 +716,22 @@ func _build_traffic() -> void:
 		root.position = pos
 		_city_root.add_child(root)
 		_traffic.append({"root": root, "axis": axis, "line": line, "lane": lane, "direction": direction, "speed": _rng.randf_range(4.2, 6.3)})
-	var bus := _spawn_vehicle("bus", "bus_blue")
-	bus.position = Vector3(-150.0, 0.03, -GRID + 3.0)
-	_city_root.add_child(bus)
-	_traffic.append({"root": bus, "axis": 0, "line": -GRID, "lane": 3.0, "direction": 1.0, "speed": 4.5})
+	for bus_index in range(2):
+		var bus := _spawn_vehicle("bus", "bus_blue")
+		bus.position = Vector3(-150.0 + float(bus_index) * 170.0, 0.03, -GRID + 3.0)
+		_city_root.add_child(bus)
+		_traffic.append({"root": bus, "axis": 0, "line": -GRID, "lane": 3.0, "direction": 1.0 if bus_index == 0 else -1.0, "speed": 4.5})
+	# Scooters and motorcycles are common street traffic in Kochi.
+	for bike_index in range(5):
+		var bike_axis := 0 if bike_index % 2 == 0 else 1
+		var bike_line := float(_rng.randi_range(-3, 3)) * GRID
+		var bike_direction := 1.0 if bike_index % 2 == 0 else -1.0
+		var bike_lane := ROAD_HALF * 0.60 * (1.0 if bike_direction > 0 else -1.0)
+		var bike_coordinate := _rng.randf_range(-WORLD_EDGE + 4.0, WORLD_EDGE - 4.0)
+		var bike := _spawn_vehicle("bike", "car_black" if bike_index % 2 == 0 else "car_red")
+		bike.position = Vector3(bike_coordinate, 0.03, bike_line + bike_lane) if bike_axis == 0 else Vector3(bike_line + bike_lane, 0.03, bike_coordinate)
+		_city_root.add_child(bike)
+		_traffic.append({"root": bike, "axis": bike_axis, "line": bike_line, "lane": bike_lane, "direction": bike_direction, "speed": _rng.randf_range(7.5, 11.0)})
 
 func _spawn_vehicle(kind: String, color_id: String) -> Node3D:
 	var root := Node3D.new()
@@ -737,6 +749,13 @@ func _spawn_vehicle(kind: String, color_id: String) -> Node3D:
 		cabin_length = 1.6
 		cabin_height = 0.95
 		cabin_width = 1.25
+	elif kind == "bike":
+		length = 1.95
+		width = 0.72
+		body_height = 0.55
+		cabin_length = 0.65
+		cabin_height = 0.45
+		cabin_width = 0.52
 	elif kind == "bus":
 		length = 8.2
 		width = 2.35
@@ -750,6 +769,11 @@ func _spawn_vehicle(kind: String, color_id: String) -> Node3D:
 	if kind == "auto":
 		_add_vehicle_part(root, "auto_green", Vector3(0.1, 1.30, 0), Vector3(1.5, 0.9, 1.26))
 		_add_vehicle_part(root, "glass_light", Vector3(0.15, 1.56, 0), Vector3(1.05, 0.5, 1.28))
+	elif kind == "bike":
+		_add_vehicle_part(root, "metal_light", Vector3(0.0, 0.70, 0), Vector3(0.75, 0.12, 0.12))
+		_add_vehicle_part(root, color_id, Vector3(-0.05, 0.80, 0), Vector3(0.58, 0.30, 0.42))
+		_add_vehicle_part(root, "metal", Vector3(0.45, 0.99, 0), Vector3(0.34, 0.48, 0.08))
+		_add_vehicle_part(root, "metal_light", Vector3(0.65, 1.15, 0), Vector3(0.08, 0.48, 0.08))
 	else:
 		_add_vehicle_part(root, "glass_light", Vector3(length * 0.35, body_height + 0.15, 0), Vector3(0.06, 0.42, cabin_width * 0.85))
 		_add_vehicle_part(root, "metal", Vector3(-length * 0.35, body_height + 0.12, 0), Vector3(0.06, 0.42, cabin_width * 0.85))
@@ -757,17 +781,20 @@ func _spawn_vehicle(kind: String, color_id: String) -> Node3D:
 	var wheel_positions: Array[Vector3] = []
 	if kind == "bus":
 		for wx in [-length * 0.34, 0.0, length * 0.34]:
-			wheel_positions.append(Vector3(wx, 0.35, -width * 0.48))
-			wheel_positions.append(Vector3(wx, 0.35, width * 0.48))
+			wheel_positions.append(Vector3(wx, 0.42, -width * 0.48))
+			wheel_positions.append(Vector3(wx, 0.42, width * 0.48))
+	elif kind == "bike":
+		wheel_positions.append(Vector3(-length * 0.36, 0.30, 0))
+		wheel_positions.append(Vector3(length * 0.36, 0.30, 0))
 	else:
 		for wx in [-length * 0.31, length * 0.31]:
 			wheel_positions.append(Vector3(wx, 0.32, -width * 0.52))
 			wheel_positions.append(Vector3(wx, 0.32, width * 0.52))
 	for wheel_pos in wheel_positions:
 		var wheel_mesh := CylinderMesh.new()
-		wheel_mesh.top_radius = 0.32 if kind != "bus" else 0.42
+		wheel_mesh.top_radius = (0.18 if kind == "bike" else (0.42 if kind == "bus" else 0.32))
 		wheel_mesh.bottom_radius = wheel_mesh.top_radius
-		wheel_mesh.height = 0.22
+		wheel_mesh.height = 0.22 if kind != "bike" else 0.11
 		wheel_mesh.radial_segments = 8
 		var wheel := MeshInstance3D.new()
 		wheel.mesh = wheel_mesh
@@ -817,8 +844,8 @@ func _update_traffic(delta: float) -> void:
 
 func _build_pedestrians() -> void:
 	var shirts := ["shirt_blue", "shirt_white", "shirt_green", "shirt_maroon", "shirt_ochre"]
-	for i in range(14):
-		var axis := 0 if i < 8 else 1
+	for i in range(24):
+		var axis := 0 if i < 13 else 1
 		var line := float(_rng.randi_range(-3, 3)) * GRID
 		var side := 1.0 if i % 2 == 0 else -1.0
 		var lane := side * (ROAD_HALF + SIDEWALK_WIDTH * 0.43)
