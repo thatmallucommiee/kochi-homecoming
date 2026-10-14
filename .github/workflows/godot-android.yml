@@ -39,9 +39,9 @@ jobs:
           path = pathlib.Path(sys.argv[1])
           data = path.read_text()
           if '[autoload]' not in data:
-              data = data.replace('[application]', '[autoload]\\nMissionDirector="*res://scripts/mission_director.gd"\\n\\n[application]', 1)
+              data = data.replace('[application]', '[autoload]\nMissionDirector="*res://scripts/mission_director.gd"\n\n[application]', 1)
           elif 'MissionDirector=' not in data:
-              data = data.replace('[autoload]', '[autoload]\\nMissionDirector="*res://scripts/mission_director.gd"', 1)
+              data = data.replace('[autoload]', '[autoload]\nMissionDirector="*res://scripts/mission_director.gd"', 1)
           path.write_text(data)
           print("MissionDirector autoload configured.")
           PY
