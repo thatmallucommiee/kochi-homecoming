@@ -6,6 +6,7 @@ on:
     branches: [godot-port]
     paths:
       - ".github/workflows/godot-android.yml"
+      - "game/**"
 
 permissions:
   contents: read
@@ -27,6 +28,23 @@ jobs:
             exit 1
           fi
           echo "GODOT_PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
+
+      - name: Install story mission system
+        shell: bash
+        run: |
+          mkdir -p "$GODOT_PROJECT_DIR/scripts"
+          cp "$GITHUB_WORKSPACE/game/scripts/mission_director.gd" "$GODOT_PROJECT_DIR/scripts/mission_director.gd"
+          python3 - "$GODOT_PROJECT_DIR/project.godot" <<'PY'
+          import pathlib, sys
+          path = pathlib.Path(sys.argv[1])
+          data = path.read_text()
+          if '[autoload]' not in data:
+              data = data.replace('[application]', '[autoload]\\nMissionDirector="*res://scripts/mission_director.gd"\\n\\n[application]', 1)
+          elif 'MissionDirector=' not in data:
+              data = data.replace('[autoload]', '[autoload]\\nMissionDirector="*res://scripts/mission_director.gd"', 1)
+          path.write_text(data)
+          print("MissionDirector autoload configured.")
+          PY
 
       - name: Set up Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
