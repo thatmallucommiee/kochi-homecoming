@@ -86,6 +86,16 @@ func _build_hud() -> void:
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 5)
 	panel.add_child(stack)
+	var minimap_script := load("res://scripts/city_minimap.gd") as Script
+	if minimap_script != null:
+		var minimap := Control.new()
+		minimap.name = "CityMinimap"
+		minimap.set_script(minimap_script)
+		minimap.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		minimap.position = Vector2(-184.0, 18.0)
+		minimap.custom_minimum_size = Vector2(166.0, 166.0)
+		minimap.size = Vector2(166.0, 166.0)
+		root.add_child(minimap)
 	title_label = Label.new()
 	title_label.add_theme_font_size_override("font_size", 16)
 	title_label.text = "KOCHI: HOMECOMING"
