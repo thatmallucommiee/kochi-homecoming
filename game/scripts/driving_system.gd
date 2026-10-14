@@ -60,7 +60,7 @@ func _create_vehicle(parent: Node3D) -> VehicleBody3D:
 	var body := VehicleBody3D.new()
 	body.name = "DrivableCompactCar"
 	body.mass = 1120.0
-	body.position = Vector3(8.0, 0.56, 12.7)
+	body.position = Vector3(2.0, 0.56, 21.5)
 	# VehicleBody3D's forward axis is local -Z; this puts the car along the east-west road.
 	body.rotation.y = -PI * 0.5
 	body.continuous_cd = true
