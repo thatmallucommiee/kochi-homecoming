@@ -9,6 +9,7 @@ const ROAD_HALF := ROAD_WIDTH * 0.5
 const SIDEWALK_WIDTH := 2.2
 const WORLD_EDGE := GRID * 4.0 + 12.0
 const WORLD_SIZE := GRID * 9.0 + 48.0
+const CHUNK_SIZE := GRID * 2.0
 const CITY_SEED := 20261014
 
 var _rng := RandomNumberGenerator.new()
@@ -149,7 +150,10 @@ func _mat(id: String, color: Color, roughness: float = 0.9, emission: Color = Co
 	_materials[id] = material
 
 func _add(shape: String, material_id: String, position: Vector3, dimensions: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
-	var key := shape + "|" + material_id
+	# Keep static batches spatially bounded so the renderer can cull distant city chunks.
+	var chunk_x := int(floor((position.x + CHUNK_SIZE * 0.5) / CHUNK_SIZE))
+	var chunk_z := int(floor((position.z + CHUNK_SIZE * 0.5) / CHUNK_SIZE))
+	var key := "%s|%s|%d|%d" % [shape, material_id, chunk_x, chunk_z]
 	if not _batches.has(key):
 		_batches[key] = []
 	var basis := Basis.from_euler(rotation) * Basis.from_scale(dimensions)
@@ -174,17 +178,20 @@ func _build_ground_and_roads() -> void:
 	_box("ground_concrete", Vector3(0, -0.43, 0), Vector3(WORLD_SIZE, 0.55, WORLD_SIZE))
 	var extent := GRID * 4.0
 	var road_length := GRID * 8.0 + ROAD_WIDTH
+	var section_length := road_length / 4.0
 	for index in range(-4, 5):
 		var line := float(index) * GRID
-		# Continuous asphalt is deliberately joined at intersections.
-		_box("road", Vector3(0, 0.02, line), Vector3(road_length, 0.18, ROAD_WIDTH))
-		_box("road", Vector3(line, 0.021, 0), Vector3(ROAD_WIDTH, 0.18, road_length))
-		for side in [-1.0, 1.0]:
-			var sidewalk_offset := ROAD_HALF + SIDEWALK_WIDTH * 0.5
-			_box("sidewalk", Vector3(0, 0.15, line + side * sidewalk_offset), Vector3(road_length, 0.25, SIDEWALK_WIDTH))
-			_box("sidewalk", Vector3(line + side * sidewalk_offset, 0.15, 0), Vector3(SIDEWALK_WIDTH, 0.25, road_length))
-			_box("drain", Vector3(0, 0.075, line + side * (ROAD_HALF + 0.18)), Vector3(road_length, 0.055, 0.34))
-			_box("drain", Vector3(line + side * (ROAD_HALF + 0.18), 0.075, 0), Vector3(0.34, 0.055, road_length))
+		# Split long streets into manageable pieces instead of one city-wide mesh.
+		for section in range(4):
+			var along := -road_length * 0.5 + section_length * (float(section) + 0.5)
+			_box("road", Vector3(along, 0.02, line), Vector3(section_length + 0.22, 0.18, ROAD_WIDTH))
+			_box("road", Vector3(line, 0.021, along), Vector3(ROAD_WIDTH, 0.18, section_length + 0.22))
+			for side in [-1.0, 1.0]:
+				var sidewalk_offset := ROAD_HALF + SIDEWALK_WIDTH * 0.5
+				_box("sidewalk", Vector3(along, 0.15, line + side * sidewalk_offset), Vector3(section_length + 0.22, 0.25, SIDEWALK_WIDTH))
+				_box("sidewalk", Vector3(line + side * sidewalk_offset, 0.15, along), Vector3(SIDEWALK_WIDTH, 0.25, section_length + 0.22))
+				_box("drain", Vector3(along, 0.075, line + side * (ROAD_HALF + 0.18)), Vector3(section_length + 0.22, 0.055, 0.34))
+				_box("drain", Vector3(line + side * (ROAD_HALF + 0.18), 0.075, along), Vector3(0.34, 0.055, section_length + 0.22))
 		# Broken white lane dividers and a double yellow center line.
 		for x in range(-56, 57):
 			var dash_x := float(x) * 7.1
@@ -217,7 +224,7 @@ func _build_ground_and_roads() -> void:
 				_box("road_white", Vector3(cx + ROAD_HALF - 1.35, 0.129, cz + offset), Vector3(2.4, 0.025, 0.72))
 				_box("road_white", Vector3(cx - ROAD_HALF + 1.35, 0.129, cz + offset), Vector3(2.4, 0.025, 0.72))
 	# A few patched areas stop the asphalt reading as one flat material.
-	for i in range(80):
+	for i in range(140):
 		var patch_pos := Vector3(_rng.randf_range(-extent, extent), 0.118, _rng.randf_range(-extent, extent))
 		if _nearest_grid_distance(patch_pos.x) < ROAD_HALF or _nearest_grid_distance(patch_pos.z) < ROAD_HALF:
 			_box("road_patch", patch_pos, Vector3(_rng.randf_range(0.5, 2.2), 0.012, _rng.randf_range(0.35, 1.1)))
