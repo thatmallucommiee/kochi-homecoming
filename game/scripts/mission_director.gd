@@ -157,8 +157,10 @@ func _build_hud() -> void:
 	var interact_button := Button.new()
 	interact_button.text = "INTERACT"
 	interact_button.custom_minimum_size = Vector2(150, 58)
-	interact_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	interact_button.position = Vector2(-178, -88)
+	# Keep INTERACT clear of the starter's RUN button and the sprint control.
+	# A mid-right anchor stays reachable in landscape without covering movement controls.
+	interact_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	interact_button.position = Vector2(-178, 58)
 	interact_button.pressed.connect(interact)
 	root.add_child(interact_button)
 
