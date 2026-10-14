@@ -17,6 +17,11 @@ var yaw := 0.0
 var pitch := -0.14
 
 func _ready() -> void:
+	# The starter builder attaches Vivek before it adds the camera children.
+	# Resolve them deferred so touch-look is not left with null camera references.
+	call_deferred("_resolve_camera_nodes")
+
+func _resolve_camera_nodes() -> void:
 	camera_pivot = get_node_or_null("CameraPivot")
 	camera = get_node_or_null("CameraPivot/Camera3D")
 	if camera_pivot:
