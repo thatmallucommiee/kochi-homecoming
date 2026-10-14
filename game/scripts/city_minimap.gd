@@ -22,7 +22,8 @@ var _objective_index := -1
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	custom_minimum_size = Vector2(166, 166)
-	size = custom_minimum_size
+	if not full_city_view:
+		size = custom_minimum_size
 	queue_redraw()
 
 func _process(delta: float) -> void:
