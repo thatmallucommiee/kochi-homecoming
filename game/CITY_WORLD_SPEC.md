@@ -13,6 +13,8 @@ This file tracks the current procedural city pass. It is a runtime-generated 3D 
 - A roadside crash scene with a damaged car, skid marks and glass fragments; it does not confirm sabotage.
 - Around 28 visible moving vehicles (cars, auto-rickshaws, a bus and motorcycles) and 24 simple walking NPCs with procedural limb swing.
 - Mission proximity triggers for entering/leaving the family home, inspecting the photo, speaking with Rafi and examining the crash scene.
+- A live world-aligned minimap with road-grid rendering, player heading, mission destination markers and a direction line to the current objective.
+- Parked roadside cars and scooters, a visible Rafi character outside his garage, tea-stall customers and static street-side citizens.
 - Procedural sky, ambient light and fog if the starter scene does not already contain them.
 - Basic collision boxes around buildings so the player cannot simply walk through every structure.
 
@@ -25,6 +27,7 @@ This file tracks the current procedural city pass. It is a runtime-generated 3D 
 - Repeating SVG surface textures for asphalt, plaster, concrete, red-oxide flooring, roof tiles, glass and wood are applied through a world-space triplanar shader. These are procedural surface textures, not scanned photography or a full PBR set with normal/roughness maps.
 - Geometry is an intentionally lightweight foundation. Traffic is visual lane-loop motion, not collision-aware traffic AI; pedestrians follow sidewalk loops, not navigation/pathfinding. The traffic vehicles are scenery and are not yet drivable by Vivek.
 - The family-house interior is a compact story set, not a fully furnished walkable building-interior system for all the city structures. Most other buildings are exterior shells.
+- The minimap reflects this procedural district's grid; it is not yet a GPS-accurate map of actual Kochi streets.
 
 ## Next improvements, in order
 
