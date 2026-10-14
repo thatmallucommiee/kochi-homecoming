@@ -3,9 +3,7 @@ name: Build Kochi Homecoming APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
 
 permissions:
   contents: read
@@ -13,105 +11,89 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Download repository
         uses: actions/checkout@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
+
       - name: Extract prototype
         run: |
           mkdir source
           unzip -q Kochi_Playable_Android_Prototype.zip -d source
-      - name: Configure app identity
+
+      - name: Set app identity
         working-directory: source
         run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const path = 'capacitor.config.json';
-          const config = JSON.parse(fs.readFileSync(path, 'utf8'));
-          config.appId = 'com.aswinmohan.kochihomecoming';
-          config.appName = 'Kochi: Homecoming';
-          fs.writeFileSync(path, JSON.stringify(config, null, 2) + '\n');
-          NODE
+          sed -i 's/Kochi: The Uncounted Road/Kochi: Homecoming/g' capacitor.config.json
+          sed -i 's/com.aswinmohan.kochiuncountedroad/com.aswinmohan.kochihomecoming/g' capacitor.config.json
+
       - name: Install dependencies
         working-directory: source
         run: npm install
+
+      - name: Build packaged offline Kochi map from OpenStreetMap
+        working-directory: source
+        run: python3 scripts/fetch_kochi_map.py
+
+      - name: Vendor Three.js modules for fully offline runtime
+        working-directory: source
+        run: |
+          mkdir -p www/vendor/jsm
+          cp node_modules/three/build/three.module.js www/vendor/three.module.js
+          cp -R node_modules/three/examples/jsm/. www/vendor/jsm/
+
+      - name: Verify offline runtime assets
+        working-directory: source
+        run: |
+          test -s www/assets/data/kochi-map.json
+          test -s www/assets/textures/kochi-asphalt-2k.png
+          test -s www/assets/textures/kochi-plaster-2k.png
+          test -s www/vendor/three.module.js
+          node --input-type=module --check < www/game.js
+          node --check www/audio.js
+          python3 -m py_compile scripts/fetch_kochi_map.py
+
       - name: Create Android project
         working-directory: source
         run: npx cap add android
+
+      - name: Force landscape orientation
+        working-directory: source
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          if re.search(r'android:screenOrientation="[^"]+"', s):
+              s = re.sub(r'android:screenOrientation="[^"]+"', 'android:screenOrientation="landscape"', s, count=1)
+          else:
+              s, count = re.subn(r'<activity\b', '<activity android:screenOrientation="landscape"', s, count=1)
+              if count != 1:
+                  raise SystemExit('Could not find Android activity in manifest')
+          p.write_text(s)
+          print('Configured Android activity for landscape mode')
+          PY
+
       - name: Sync Android assets
         working-directory: source
         run: npx cap sync android
-      - name: Generate native launcher icons
-        working-directory: source
-        run: |
-          python3 -m pip install --quiet pillow
-          python3 <<'PY'
-          from pathlib import Path
-          from PIL import Image, ImageOps
-          source = Path('www/assets/images/kochi-homecoming-logo.png')
-          if not source.exists():
-              raise SystemExit('Official logo missing: ' + str(source))
-          logo = Image.open(source).convert('RGB')
-          bg = Image.new('RGB', (512, 512), (8, 10, 12))
-          art = ImageOps.contain(logo, (500, 500), method=Image.Resampling.LANCZOS)
-          bg.paste(art, ((512-art.width)//2, (512-art.height)//2))
-          icon = bg.convert('RGBA')
-          res = Path('android/app/src/main/res')
-          for folder, size in {'mipmap-mdpi':48,'mipmap-hdpi':72,'mipmap-xhdpi':96,'mipmap-xxhdpi':144,'mipmap-xxxhdpi':192}.items():
-              dest = res / folder
-              dest.mkdir(parents=True, exist_ok=True)
-              scaled = icon.resize((size,size), Image.Resampling.LANCZOS)
-              scaled.save(dest/'ic_launcher.png', optimize=True)
-              scaled.save(dest/'ic_launcher_round.png', optimize=True)
-          fg = Image.new('RGBA',(432,432),(0,0,0,0))
-          art = ImageOps.contain(logo,(384,384),method=Image.Resampling.LANCZOS).convert('RGBA')
-          fg.alpha_composite(art,((432-art.width)//2,(432-art.height)//2))
-          (res/'drawable').mkdir(parents=True,exist_ok=True)
-          fg.save(res/'drawable/kochi_launcher_foreground.png', optimize=True)
-          (res/'values').mkdir(parents=True,exist_ok=True)
-          (res/'values/ic_launcher_background.xml').write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources><color name="ic_launcher_background">#080A0C</color></resources>\n')
-          adaptive = '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/ic_launcher_background"/><foreground android:drawable="@drawable/kochi_launcher_foreground"/></adaptive-icon>\n'
-          (res/'mipmap-anydpi-v26').mkdir(parents=True,exist_ok=True)
-          (res/'mipmap-anydpi-v26/ic_launcher.xml').write_text(adaptive)
-          (res/'mipmap-anydpi-v26/ic_launcher_round.xml').write_text(adaptive)
-          print('Native launcher icon generated from the supplied logo.')
-          PY
-      - name: Set landscape orientation
-        working-directory: source/android
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-          import re
-          manifest = Path('app/src/main/AndroidManifest.xml')
-          content = manifest.read_text()
-          match = re.search(r'<activity\b[^>]*>', content)
-          if not match:
-              raise SystemExit('No activity tag found')
-          activity = match.group(0)
-          if re.search(r'\bandroid:screenOrientation\s*=', activity):
-              activity = re.sub(r'\bandroid:screenOrientation\s*=\s*"[^"]*"', 'android:screenOrientation="landscape"', activity)
-          else:
-              activity = activity[:-1] + ' android:screenOrientation="landscape">'
-          manifest.write_text(content[:match.start()] + activity + content[match.end():])
-          PY
-      - name: Verify launcher icon resources
-        working-directory: source/android
-        run: |
-          test -s app/src/main/res/mipmap-mdpi/ic_launcher.png
-          test -s app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          test -s app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-          grep -n 'screenOrientation="landscape"' app/src/main/AndroidManifest.xml
+
       - name: Build APK
         working-directory: source/android
         run: ./gradlew assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
