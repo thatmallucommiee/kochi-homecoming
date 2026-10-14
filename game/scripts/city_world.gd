@@ -1,0 +1,865 @@
+extends Node
+## Procedural, mobile-minded Kochi district for the Godot starter.
+## Static architecture is batched into MultiMeshes; moving traffic and walkers remain individual agents.
+## All coordinates are meters. No external runtime downloads are required.
+
+const GRID := 96.0
+const ROAD_WIDTH := 15.0
+const ROAD_HALF := ROAD_WIDTH * 0.5
+const SIDEWALK_WIDTH := 2.2
+const WORLD_EDGE := GRID * 3.0 + 12.0
+const WORLD_SIZE := GRID * 7.0 + 48.0
+const CITY_SEED := 20261014
+
+var _rng := RandomNumberGenerator.new()
+var _materials: Dictionary = {}
+var _batches: Dictionary = {}
+var _city_root: Node3D
+var _active_scene: Node
+var _traffic: Array[Dictionary] = []
+var _walkers: Array[Dictionary] = []
+var _clock := 0.0
+var _built := false
+var _sign_count := 0
+
+const HOUSE_PALETTE := [
+	"wall_cream", "wall_pale_green", "wall_sky", "wall_ochre",
+	"wall_rose", "wall_sand", "wall_white", "wall_mint"
+]
+const SHOP_NAMES := [
+	"CHAYA KADA", "RAFI AUTO WORKS", "MALABAR BAKERY", "MEDICALS",
+	"FAMILY STORE", "CITY TEXTILES", "FRESH MART", "HOTEL KOCHI",
+	"MOBILE CARE", "COOL BAR", "TWO WHEELERS", "SUPERMARKET",
+	"JUICE CORNER", "FISH MARKET", "SREE STORES", "BUS SERVICE"
+]
+
+func _process(delta: float) -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	if scene != _active_scene or not is_instance_valid(_city_root):
+		_active_scene = scene
+		_install_city(scene)
+	if not _built:
+		return
+	_clock += delta
+	_update_traffic(delta)
+	_update_walkers(delta)
+
+func _install_city(scene: Node) -> void:
+	if not is_instance_valid(scene):
+		return
+	var existing := scene.get_node_or_null("KochiLivingDistrict")
+	if existing is Node3D:
+		_city_root = existing
+		_built = true
+		return
+	_city_root = Node3D.new()
+	_city_root.name = "KochiLivingDistrict"
+	scene.add_child(_city_root)
+	_rng.seed = CITY_SEED
+	_materials.clear()
+	_batches.clear()
+	_traffic.clear()
+	_walkers.clear()
+	_sign_count = 0
+	_make_materials()
+	_build_ground_and_roads()
+	_build_buildings()
+	_build_street_life()
+	_build_landmarks()
+	_flush_static_batches()
+	_build_traffic()
+	_build_pedestrians()
+	_setup_lighting(scene)
+	_built = true
+	print("KochiLivingDistrict ready: dense procedural neighborhood, road grid, buildings, traffic and pedestrians.")
+
+func _make_materials() -> void:
+	_mat("ground_concrete", Color("#686b65"), 0.95)
+	_mat("ground_soil", Color("#594b3d"), 1.0)
+	_mat("grass", Color("#485d3c"), 1.0)
+	_mat("grass_light", Color("#617148"), 1.0)
+	_mat("road", Color("#303337"), 0.95)
+	_mat("road_patch", Color("#424449"), 1.0)
+	_mat("road_white", Color("#d5d3c9"), 0.85)
+	_mat("road_yellow", Color("#d2ae48"), 0.8)
+	_mat("sidewalk", Color("#88877e"), 0.95)
+	_mat("drain", Color("#343b3b"), 1.0)
+	_mat("wall_cream", Color("#cbbd9e"), 0.9)
+	_mat("wall_pale_green", Color("#98b19a"), 0.9)
+	_mat("wall_sky", Color("#8fa9b5"), 0.9)
+	_mat("wall_ochre", Color("#c6a56f"), 0.9)
+	_mat("wall_rose", Color("#b98c84"), 0.9)
+	_mat("wall_sand", Color("#b7aa91"), 0.9)
+	_mat("wall_white", Color("#d4d0c3"), 0.9)
+	_mat("wall_mint", Color("#a8bba5"), 0.9)
+	_mat("wall_gray", Color("#858b8b"), 0.95)
+	_mat("concrete", Color("#9a978d"), 0.95)
+	_mat("roof_red", Color("#79483b"), 0.95)
+	_mat("roof_dark", Color("#41494d"), 0.9)
+	_mat("wood", Color("#654b38"), 0.9)
+	_mat("wood_light", Color("#8b6b4a"), 0.9)
+	_mat("glass", Color("#253b42"), 0.25, Color("#101c20"), 0.15)
+	_mat("glass_light", Color("#526b70"), 0.3)
+	_mat("frame", Color("#d3c8b0"), 0.75)
+	_mat("metal", Color("#4b5252"), 0.6)
+	_mat("metal_light", Color("#8b918e"), 0.55)
+	_mat("sign_red", Color("#963b2e"), 0.8)
+	_mat("sign_blue", Color("#2c5368"), 0.8)
+	_mat("sign_green", Color("#2c5e49"), 0.8)
+	_mat("sign_yellow", Color("#d4a842"), 0.8)
+	_mat("awning", Color("#b8553d"), 0.8)
+	_mat("awning_green", Color("#4e7257"), 0.8)
+	_mat("awning_blue", Color("#40677b"), 0.8)
+	_mat("palm_trunk", Color("#6e5940"), 1.0)
+	_mat("leaf_dark", Color("#2f5034"), 1.0)
+	_mat("leaf_green", Color("#4f6a3a"), 1.0)
+	_mat("bush", Color("#3e5a39"), 1.0)
+	_mat("puddle", Color("#36464b"), 0.22)
+	_mat("lamp_glow", Color("#e7b86a"), 0.4, Color("#e7b86a"), 1.4)
+	_mat("cable", Color("#262c2b"), 0.8)
+	_mat("car_white", Color("#d3d0c6"), 0.45)
+	_mat("car_silver", Color("#929b9d"), 0.4, Color("#171a1b"), 0.05)
+	_mat("car_blue", Color("#35576e"), 0.4)
+	_mat("car_red", Color("#943f37"), 0.4)
+	_mat("car_green", Color("#49624b"), 0.45)
+	_mat("car_black", Color("#303538"), 0.4)
+	_mat("auto_yellow", Color("#d2a92f"), 0.6)
+	_mat("auto_green", Color("#305a43"), 0.55)
+	_mat("bus_blue", Color("#587c98"), 0.5)
+	_mat("shirt_blue", Color("#3b637a"), 0.9)
+	_mat("shirt_white", Color("#c8c6ba"), 0.9)
+	_mat("shirt_green", Color("#536b51"), 0.9)
+	_mat("shirt_maroon", Color("#7a4443"), 0.9)
+	_mat("shirt_ochre", Color("#b18b50"), 0.9)
+	_mat("skin", Color("#9b6b4f"), 0.95)
+	_mat("hair", Color("#242321"), 0.95)
+	_mat("pants_dark", Color("#343b43"), 0.9)
+	_mat("pants_blue", Color("#40566d"), 0.9)
+
+func _mat(id: String, color: Color, roughness: float = 0.9, emission: Color = Color.BLACK, emission_energy: float = 0.0) -> void:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = roughness
+	if emission_energy > 0.0:
+		material.emission_enabled = true
+		material.emission = emission
+		material.emission_energy_multiplier = emission_energy
+	_materials[id] = material
+
+func _add(shape: String, material_id: String, position: Vector3, dimensions: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
+	var key := shape + "|" + material_id
+	if not _batches.has(key):
+		_batches[key] = []
+	var basis := Basis.from_euler(rotation) * Basis.from_scale(dimensions)
+	var transform := Transform3D(basis, position)
+	_batche_append(key, transform)
+
+func _batche_append(key: String, transform: Transform3D) -> void:
+	var records: Array = _batches[key]
+	records.append(transform)
+	_batches[key] = records
+
+func _box(material_id: String, position: Vector3, size: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
+	_add("box", material_id, position, size, rotation)
+
+func _cylinder(material_id: String, position: Vector3, size: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
+	_add("cylinder", material_id, position, size, rotation)
+
+func _sphere(material_id: String, position: Vector3, size: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
+	_add("sphere", material_id, position, size, rotation)
+
+func _build_ground_and_roads() -> void:
+	_box("ground_concrete", Vector3(0, -0.43, 0), Vector3(WORLD_SIZE, 0.55, WORLD_SIZE))
+	var extent := GRID * 3.0
+	var road_length := GRID * 6.0 + ROAD_WIDTH
+	for index in range(-3, 4):
+		var line := float(index) * GRID
+		# Continuous asphalt is deliberately joined at intersections.
+		_box("road", Vector3(0, 0.02, line), Vector3(road_length, 0.18, ROAD_WIDTH))
+		_box("road", Vector3(line, 0.021, 0), Vector3(ROAD_WIDTH, 0.18, road_length))
+		for side in [-1.0, 1.0]:
+			var sidewalk_offset := ROAD_HALF + SIDEWALK_WIDTH * 0.5
+			_box("sidewalk", Vector3(0, 0.15, line + side * sidewalk_offset), Vector3(road_length, 0.25, SIDEWALK_WIDTH))
+			_box("sidewalk", Vector3(line + side * sidewalk_offset, 0.15, 0), Vector3(SIDEWALK_WIDTH, 0.25, road_length))
+			_box("drain", Vector3(0, 0.075, line + side * (ROAD_HALF + 0.18)), Vector3(road_length, 0.055, 0.34))
+			_box("drain", Vector3(line + side * (ROAD_HALF + 0.18), 0.075, 0), Vector3(0.34, 0.055, road_length))
+		# Broken white lane dividers and a double yellow center line.
+		for x in range(-42, 43):
+			var dash_x := float(x) * 7.1
+			if abs(dash_x) < extent - 4.0:
+				_box("road_white", Vector3(dash_x, 0.119, line + 3.75), Vector3(3.8, 0.018, 0.11))
+				_box("road_white", Vector3(dash_x, 0.119, line - 3.75), Vector3(3.8, 0.018, 0.11))
+		for z in range(-42, 43):
+			var dash_z := float(z) * 7.1
+			if abs(dash_z) < extent - 4.0:
+				_box("road_white", Vector3(line + 3.75, 0.12, dash_z), Vector3(0.11, 0.018, 3.8))
+				_box("road_white", Vector3(line - 3.75, 0.12, dash_z), Vector3(0.11, 0.018, 3.8))
+		for dash in range(-42, 43):
+			var mark_x := float(dash) * 7.1
+			if abs(mark_x) < extent - 4.0:
+				_box("road_yellow", Vector3(mark_x, 0.122, line - 0.20), Vector3(3.5, 0.02, 0.10))
+				_box("road_yellow", Vector3(mark_x, 0.122, line + 0.20), Vector3(3.5, 0.02, 0.10))
+			var mark_z := float(dash) * 7.1
+			if abs(mark_z) < extent - 4.0:
+				_box("road_yellow", Vector3(line - 0.20, 0.123, mark_z), Vector3(0.10, 0.02, 3.5))
+				_box("road_yellow", Vector3(line + 0.20, 0.123, mark_z), Vector3(0.10, 0.02, 3.5))
+	# Zebra crossings around the central junctions.
+	for ix in range(-1, 2):
+		for iz in range(-1, 2):
+			var cx := float(ix) * GRID
+			var cz := float(iz) * GRID
+			for stripe in range(-4, 5):
+				var offset := float(stripe) * 1.25
+				_box("road_white", Vector3(cx + offset, 0.128, cz + ROAD_HALF - 1.35), Vector3(0.72, 0.025, 2.4))
+				_box("road_white", Vector3(cx + offset, 0.128, cz - ROAD_HALF + 1.35), Vector3(0.72, 0.025, 2.4))
+				_box("road_white", Vector3(cx + ROAD_HALF - 1.35, 0.129, cz + offset), Vector3(2.4, 0.025, 0.72))
+				_box("road_white", Vector3(cx - ROAD_HALF + 1.35, 0.129, cz + offset), Vector3(2.4, 0.025, 0.72))
+	# A few patched areas stop the asphalt reading as one flat material.
+	for i in range(80):
+		var patch_pos := Vector3(_rng.randf_range(-extent, extent), 0.118, _rng.randf_range(-extent, extent))
+		if _nearest_grid_distance(patch_pos.x) < ROAD_HALF or _nearest_grid_distance(patch_pos.z) < ROAD_HALF:
+			_box("road_patch", patch_pos, Vector3(_rng.randf_range(0.5, 2.2), 0.012, _rng.randf_range(0.35, 1.1)))
+
+func _nearest_grid_distance(value: float) -> float:
+	return abs(value - round(value / GRID) * GRID)
+
+func _build_buildings() -> void:
+	# Building rows sit along both sides of every street, making a dense connected grid.
+	for axis in [0, 1]:
+		for road_index in range(-3, 4):
+			for segment in range(-3, 3):
+				for side in [-1, 1]:
+					var central := abs(road_index) <= 1 and abs(segment) <= 2
+					var count := 2 if central else 1
+					if abs(road_index) == 3 and abs(segment) == 2 and _rng.randf() < 0.45:
+						continue
+					for slot in range(count):
+						var gap := GRID / float(count)
+						var along := float(segment) * GRID + (float(slot) + 0.5) * gap
+						var frontage := gap - _rng.randf_range(5.0, 10.0)
+						if count == 1:
+							frontage = _rng.randf_range(28.0, 48.0)
+						frontage = clamp(frontage, 17.0, 43.0)
+						var depth := _rng.randf_range(13.0, 22.0)
+						var floors := _choose_floors(road_index, segment, axis)
+						var face := 0
+						var position := Vector3.ZERO
+						if axis == 0:
+							var road_z := float(road_index) * GRID
+							position = Vector3(along, 0, road_z + side * (ROAD_HALF + SIDEWALK_WIDTH + depth * 0.5 + 0.45))
+							face = 0 if side > 0 else 1
+						else:
+							var road_x := float(road_index) * GRID
+							position = Vector3(road_x + side * (ROAD_HALF + SIDEWALK_WIDTH + depth * 0.5 + 0.45), 0, along)
+							face = 2 if side > 0 else 3
+						var wall_id: String = HOUSE_PALETTE[_rng.randi_range(0, HOUSE_PALETTE.size() - 1)]
+						var kind := "shop" if central or (_rng.randf() < 0.22) else "residential"
+						if floors >= 4:
+							kind = "apartment"
+						_make_building(position, frontage, depth, floors, face, wall_id, kind)
+	# Fill the center of blocks with workshops, small homes and courtyards.
+	for gx in range(-3, 3):
+		for gz in range(-3, 3):
+			if _rng.randf() < 0.22:
+				continue
+			var cx := (float(gx) + 0.5) * GRID + _rng.randf_range(-9.0, 9.0)
+			var cz := (float(gz) + 0.5) * GRID + _rng.randf_range(-9.0, 9.0)
+			var width := _rng.randf_range(12.0, 21.0)
+			var depth := _rng.randf_range(10.0, 17.0)
+			var face := _rng.randi_range(0, 3)
+			var wall_id: String = HOUSE_PALETTE[_rng.randi_range(0, HOUSE_PALETTE.size() - 1)]
+			_make_building(Vector3(cx, 0, cz), width, depth, _rng.randi_range(1, 2), face, wall_id, "yard")
+	_build_trees_and_verges()
+
+func _choose_floors(road_index: int, segment: int, axis: int) -> int:
+	var center_weight := abs(road_index) <= 1 and abs(segment) <= 1
+	if center_weight:
+		return _rng.randi_range(2, 5)
+	if abs(road_index) <= 1 or abs(segment) <= 1:
+		return _rng.randi_range(2, 4)
+	if _rng.randf() < 0.10:
+		return _rng.randi_range(3, 5)
+	return _rng.randi_range(1, 3)
+
+func _make_building(center: Vector3, frontage_width: float, depth: float, floors: int, face: int, wall_id: String, kind: String) -> void:
+	var width := clamp(frontage_width, 14.0, 46.0)
+	var building_depth := clamp(depth, 11.0, 24.0)
+	var sx := width if face < 2 else building_depth
+	var sz := building_depth if face < 2 else width
+	var total_height := 2.8 + float(floors) * 2.75
+	var shell_size := Vector3(sx, total_height, sz)
+	_box(wall_id, center + Vector3(0, total_height * 0.5, 0), shell_size)
+	_add_building_collision(center + Vector3(0, total_height * 0.5, 0), shell_size)
+	# Foundation, plinth, and a thin parapet give each silhouette more depth.
+	_box("concrete", center + Vector3(0, 0.22, 0), Vector3(sx + 0.35, 0.42, sz + 0.35))
+	if floors >= 2:
+		_box("concrete", center + Vector3(0, total_height - 0.22, 0), Vector3(sx + 0.35, 0.38, sz + 0.35))
+		if kind == "apartment":
+			_box("wall_gray", center + Vector3(0, total_height + 0.28, 0), Vector3(sx + 0.25, 0.42, sz + 0.25))
+	else:
+		# Many Kerala homes have simple sloping tiled roofs rather than glass towers.
+		if face < 2 and _rng.randf() < 0.66:
+			var roof_color := "roof_red" if _rng.randf() < 0.78 else "roof_dark"
+			_box(roof_color, center + Vector3(0, total_height + 0.12, -sz * 0.18), Vector3(sx + 1.0, 0.30, sz * 0.66), Vector3(0.33, 0, 0))
+			_box(roof_color, center + Vector3(0, total_height + 0.12, sz * 0.18), Vector3(sx + 1.0, 0.30, sz * 0.66), Vector3(-0.33, 0, 0))
+		else:
+			_box("roof_dark", center + Vector3(0, total_height + 0.15, 0), Vector3(sx + 0.7, 0.28, sz + 0.7))
+	# Ground floor has a shutter or a glazed shopfront.
+	var shop_front := kind == "shop" or kind == "yard"
+	if shop_front:
+		_add_facade_panel(center, face, width * 0.78, 1.9, 1.72, building_depth, "glass")
+		_add_facade_panel(center, face, width * 0.82, 0.20, 2.82, building_depth, "metal")
+		var awning_id := ["awning", "awning_green", "awning_blue"][_rng.randi_range(0, 2)]
+		var awning_pos := _face_position(center, face, building_depth * 0.5 + 0.62, 3.05)
+		var awning_size := Vector3(width * 0.88, 0.26, 1.05) if face < 2 else Vector3(1.05, 0.26, width * 0.88)
+		_box(awning_id, awning_pos, awning_size)
+		_box(["sign_red", "sign_blue", "sign_green", "sign_yellow"][_rng.randi_range(0, 3)], _face_position(center, face, building_depth * 0.5 + 0.13, 3.63), Vector3(width * 0.72, 0.62, 0.18) if face < 2 else Vector3(0.18, 0.62, width * 0.72))
+		if _sign_count < 26:
+			_add_shop_label(center, face, building_depth, width, _sign_count)
+			_sign_count += 1
+	else:
+		_add_facade_panel(center, face, width * 0.22, 1.15, 1.65, building_depth, "glass")
+		_box("wood", _face_position(center, face, building_depth * 0.5 + 0.10, 1.35), Vector3(width * 0.24, 2.15, 0.16) if face < 2 else Vector3(0.16, 2.15, width * 0.24))
+	# Upper floors get repeated dark windows, pale frames, and occasional balconies.
+	for floor in range(1, floors):
+		var y := 2.95 + float(floor) * 2.75
+		var window_count := clamp(int(width / 5.5), 2, 5)
+		for wi in range(window_count):
+			var u := (float(wi) - float(window_count - 1) * 0.5) * (width / float(window_count))
+			var win_width := min(1.55, width / float(window_count) * 0.48)
+			_add_window(center, face, u, y, win_width, 1.22, building_depth)
+			if kind == "apartment" and _rng.randf() < 0.56:
+				_add_balcony(center, face, u, y - 0.15, win_width + 0.65, building_depth)
+	# AC units, roof tanks, aerials and laundry-like details.
+	if floors >= 2 and _rng.randf() < 0.7:
+		var ac_pos := _face_position(center, (face + 2) % 4, building_depth * 0.5 + 0.23, min(total_height - 0.8, 5.3))
+		_box("metal_light", ac_pos, Vector3(1.05, 0.72, 0.55) if face < 2 else Vector3(0.55, 0.72, 1.05))
+	if floors >= 2 and _rng.randf() < 0.44:
+		_cylinder("metal", center + Vector3(sx * 0.22, total_height + 0.85, sz * 0.18), Vector3(1.0, 1.65, 1.0))
+	if floors >= 3 and _rng.randf() < 0.3:
+		_cylinder("metal_light", center + Vector3(-sx * 0.23, total_height + 1.4, -sz * 0.2), Vector3(0.12, 2.8, 0.12))
+	if _rng.randf() < 0.22:
+		_box("wood_light", _face_position(center, face, building_depth * 0.5 + 0.13, _rng.randf_range(2.1, min(total_height - 0.4, 5.7))), Vector3(width * 0.24, 0.08, 0.10) if face < 2 else Vector3(0.10, 0.08, width * 0.24))
+
+func _face_position(center: Vector3, face: int, distance: float, y: float) -> Vector3:
+	match face:
+		0:
+			return center + Vector3(0, y, -distance)
+		1:
+			return center + Vector3(0, y, distance)
+		2:
+			return center + Vector3(-distance, y, 0)
+		_:
+			return center + Vector3(distance, y, 0)
+
+func _add_facade_panel(center: Vector3, face: int, width: float, height: float, y: float, depth: float, material_id: String) -> void:
+	var pos := _face_position(center, face, depth * 0.5 + 0.10, y)
+	var size := Vector3(width, height, 0.13) if face < 2 else Vector3(0.13, height, width)
+	_box(material_id, pos, size)
+
+func _add_window(center: Vector3, face: int, offset: float, y: float, width: float, height: float, depth: float) -> void:
+	var pos := _face_position(center, face, depth * 0.5 + 0.10, y)
+	if face < 2:
+		pos.x += offset
+		_box("glass", pos, Vector3(width, height, 0.13))
+		_box("frame", pos + Vector3(0, height * 0.5, 0), Vector3(width + 0.18, 0.09, 0.16))
+		_box("frame", pos + Vector3(0, -height * 0.5, 0), Vector3(width + 0.18, 0.09, 0.16))
+		_box("frame", pos + Vector3(-width * 0.5, 0, 0), Vector3(0.08, height, 0.16))
+		_box("frame", pos + Vector3(width * 0.5, 0, 0), Vector3(0.08, height, 0.16))
+		_box("frame", pos, Vector3(0.055, height, 0.17))
+	else:
+		pos.z += offset
+		_box("glass", pos, Vector3(0.13, height, width))
+		_box("frame", pos + Vector3(0, height * 0.5, 0), Vector3(0.16, 0.09, width + 0.18))
+		_box("frame", pos + Vector3(0, -height * 0.5, 0), Vector3(0.16, 0.09, width + 0.18))
+		_box("frame", pos + Vector3(0, 0, -width * 0.5), Vector3(0.16, height, 0.08))
+		_box("frame", pos + Vector3(0, 0, width * 0.5), Vector3(0.16, height, 0.08))
+		_box("frame", pos, Vector3(0.17, height, 0.055))
+
+func _add_balcony(center: Vector3, face: int, offset: float, y: float, width: float, depth: float) -> void:
+	var distance := depth * 0.5 + 0.55
+	var pos := _face_position(center, face, distance, y - 0.48)
+	var slab := Vector3(width, 0.12, 0.8) if face < 2 else Vector3(0.8, 0.12, width)
+	if face < 2:
+		pos.x += offset
+	else:
+		pos.z += offset
+	_box("concrete", pos, slab)
+	for bar in range(5):
+		var u := (float(bar) - 2.0) * width / 4.0
+		var rail_pos := pos + Vector3(u, 0.48, 0) if face < 2 else pos + Vector3(0, 0.48, u)
+		_box("metal_light", rail_pos, Vector3(0.045, 0.85, 0.045))
+	var top_pos := pos + Vector3(0, 0.88, 0)
+	_box("metal_light", top_pos, Vector3(width, 0.05, 0.05) if face < 2 else Vector3(0.05, 0.05, width))
+
+func _add_shop_label(center: Vector3, face: int, depth: float, width: float, index: int) -> void:
+	var label := Label3D.new()
+	label.name = "ShopSign_%02d" % index
+	label.text = SHOP_NAMES[index % SHOP_NAMES.size()]
+	label.font_size = 42
+	label.pixel_size = 0.009
+	label.outline_size = 5
+	label.modulate = Color("#fff0d2")
+	label.no_depth_test = false
+	label.position = _face_position(center, face, depth * 0.5 + 0.24, 3.65)
+	if face == 1:
+		label.rotation.y = PI
+	elif face == 2:
+		label.rotation.y = PI * 0.5
+	elif face == 3:
+		label.rotation.y = -PI * 0.5
+	_city_root.add_child(label)
+
+func _add_building_collision(center: Vector3, size: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = "BuildingCollision"
+	body.position = center
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	body.add_child(collision)
+	_city_root.add_child(body)
+
+func _build_trees_and_verges() -> void:
+	# Roadside lamps and power poles: clustered props, with a handful of overhead cables.
+	for road_index in range(-3, 4):
+		var line := float(road_index) * GRID
+		for along_index in range(-8, 9):
+			var along := float(along_index) * 36.0
+			if abs(along) > WORLD_EDGE - 20:
+				continue
+			for side in [-1.0, 1.0]:
+				var x_road_pole := Vector3(along, 0, line + side * 6.4)
+				_cylinder("metal", x_road_pole + Vector3(0, 4.0, 0), Vector3(0.20, 8.0, 0.20))
+				_box("metal", x_road_pole + Vector3(0.75, 7.6, 0), Vector3(1.6, 0.12, 0.12))
+				_sphere("lamp_glow", x_road_pole + Vector3(1.45, 7.45, 0), Vector3(0.32, 0.18, 0.24))
+				var z_road_pole := Vector3(line + side * 6.4, 0, along)
+				_cylinder("metal", z_road_pole + Vector3(0, 4.0, 0), Vector3(0.20, 8.0, 0.20))
+				_box("metal", z_road_pole + Vector3(0, 7.6, 0.75), Vector3(0.12, 0.12, 1.6))
+				_sphere("lamp_glow", z_road_pole + Vector3(0, 7.45, 1.45), Vector3(0.24, 0.18, 0.32))
+		# Three overhead lines on each road; keep cable instances light-weight.
+		for seg in range(-3, 3):
+			for wire in range(3):
+				var wire_height := 8.4 + float(wire) * 0.32
+				var wire_z := line + 6.4 + float(wire) * 0.10
+				_box("cable", Vector3((float(seg) + 0.5) * GRID, wire_height, wire_z), Vector3(GRID, 0.045, 0.045))
+				var wire_x := line + 6.4 + float(wire) * 0.10
+				_box("cable", Vector3(wire_x, wire_height, (float(seg) + 0.5) * GRID), Vector3(0.045, 0.045, GRID))
+	# Palms and broad-leaf trees at block corners and near the outer roads.
+	for i in range(58):
+		var x := _rng.randf_range(-WORLD_EDGE + 8, WORLD_EDGE - 8)
+		var z := _rng.randf_range(-WORLD_EDGE + 8, WORLD_EDGE - 8)
+		if _nearest_grid_distance(x) < ROAD_HALF + 4.5 or _nearest_grid_distance(z) < ROAD_HALF + 4.5:
+			continue
+		if _rng.randf() < 0.66:
+			_add_palm(Vector3(x, 0, z), _rng.randf_range(5.5, 9.0))
+		else:
+			_add_broad_tree(Vector3(x, 0, z), _rng.randf_range(3.5, 5.2))
+	# Puddles sit off the driving lanes, catching the gray Kerala daylight.
+	for p in range(42):
+		var x := _rng.randf_range(-WORLD_EDGE + 3, WORLD_EDGE - 3)
+		var z := _rng.randf_range(-WORLD_EDGE + 3, WORLD_EDGE - 3)
+		if _nearest_grid_distance(x) < ROAD_HALF - 1.0 and _nearest_grid_distance(z) < ROAD_HALF - 1.0:
+			continue
+		_box("puddle", Vector3(x, 0.118, z), Vector3(_rng.randf_range(0.8, 3.0), 0.018, _rng.randf_range(0.45, 1.4)))
+
+func _add_palm(base: Vector3, height: float) -> void:
+	_cylinder("palm_trunk", base + Vector3(0, height * 0.5, 0), Vector3(0.42, height, 0.42), Vector3(0, 0, _rng.randf_range(-0.07, 0.07)))
+	var crown := base + Vector3(0, height, 0)
+	for i in range(7):
+		var angle := TAU * float(i) / 7.0
+		var direction := Vector3(cos(angle), 0, sin(angle))
+		var leaf_pos := crown + direction * 2.0 + Vector3(0, -0.45, 0)
+		_box("leaf_green" if i % 2 == 0 else "leaf_dark", leaf_pos, Vector3(4.6, 0.16, 0.48), Vector3(-0.18, -angle, 0.30))
+
+func _add_broad_tree(base: Vector3, height: float) -> void:
+	_cylinder("palm_trunk", base + Vector3(0, height * 0.42, 0), Vector3(0.40, height * 0.85, 0.40))
+	_sphere("bush", base + Vector3(0, height * 0.92, 0), Vector3(3.0, 2.6, 3.0))
+	_sphere("leaf_green", base + Vector3(-0.9, height * 0.80, 0.45), Vector3(1.8, 1.6, 1.7))
+	_sphere("leaf_dark", base + Vector3(0.8, height * 0.80, -0.5), Vector3(1.8, 1.5, 1.8))
+
+func _build_street_life() -> void:
+	# Bus shelters, small stalls, waste bins and roadside notice boards.
+	for i in range(-2, 3):
+		var x := float(i) * GRID + 22.0
+		var z := -GRID * 2.0 - 10.0
+		_box("metal", Vector3(x, 1.4, z), Vector3(5.0, 0.16, 2.2))
+		for post_x in [-2.2, 2.2]:
+			for post_z in [-0.8, 0.8]:
+				_cylinder("metal", Vector3(x + post_x, 1.25, z + post_z), Vector3(0.12, 2.5, 0.12))
+		_box("roof_dark", Vector3(x, 2.7, z), Vector3(5.4, 0.22, 2.6))
+		_box("sign_blue", Vector3(x, 2.15, z - 1.18), Vector3(4.5, 0.5, 0.14))
+		var bin_x := x + 5.0
+		_box("metal", Vector3(bin_x, 0.48, z), Vector3(0.65, 0.95, 0.65))
+	# Corner shops get kerbside stacks and simple produce crates.
+	for i in range(36):
+		var x := _rng.randf_range(-WORLD_EDGE + 10, WORLD_EDGE - 10)
+		var z := _rng.randf_range(-WORLD_EDGE + 10, WORLD_EDGE - 10)
+		if _nearest_grid_distance(x) > ROAD_HALF + 8 and _nearest_grid_distance(z) > ROAD_HALF + 8:
+			continue
+		var crate_mat := "wood_light" if i % 2 == 0 else "wood"
+		_box(crate_mat, Vector3(x, 0.45, z), Vector3(0.75, 0.75, 0.75))
+		if i % 3 == 0:
+			_box("sign_yellow", Vector3(x + 0.42, 1.05, z), Vector3(0.8, 0.09, 0.7))
+	# A small central signal adds an urban anchor without expensive real-time lights.
+	for offset in [-1.0, 1.0]:
+		_cylinder("metal", Vector3(offset, 3.8, -5.8), Vector3(0.16, 7.6, 0.16))
+		_box("metal", Vector3(offset, 7.4, -5.8), Vector3(0.72, 1.9, 0.45))
+		for dy in [0.48, 0.0, -0.48]:
+			_sphere("lamp_glow", Vector3(offset, 7.4 + dy, -5.53), Vector3(0.24, 0.24, 0.14))
+
+func _build_landmarks() -> void:
+	# An identifiable garage district anchor for future real interaction triggers.
+	_box("concrete", Vector3(15.0, 0.10, 23.0), Vector3(30.0, 0.20, 22.0))
+	_box("wall_gray", Vector3(15.0, 2.0, 31.0), Vector3(22.0, 4.0, 0.5))
+	_box("roof_dark", Vector3(15.0, 4.2, 31.0), Vector3(23.0, 0.35, 0.8))
+	_box("sign_blue", Vector3(15.0, 3.0, 30.67), Vector3(13.0, 0.9, 0.12))
+	var garage_label := Label3D.new()
+	garage_label.name = "RafiGarageSign"
+	garage_label.text = "RAFI AUTO WORKS"
+	garage_label.font_size = 58
+	garage_label.pixel_size = 0.012
+	garage_label.outline_size = 5
+	garage_label.modulate = Color("#fff0d2")
+	garage_label.position = Vector3(15.0, 2.72, 30.55)
+	garage_label.rotation.y = PI
+	_city_root.add_child(garage_label)
+	# Garage shutter and bays.
+	for bay in range(2):
+		_box("metal", Vector3(10.0 + float(bay) * 10.0, 1.45, 30.64), Vector3(8.5, 2.75, 0.18))
+		for rib in range(7):
+			_box("metal_light", Vector3(10.0 + float(bay) * 10.0, 0.35 + float(rib) * 0.34, 30.52), Vector3(8.2, 0.035, 0.06))
+	# A simple tea stall opposite the junction creates a recognisable street-life cue.
+	_box("wall_ochre", Vector3(-16.0, 1.5, 18.0), Vector3(8.5, 3.0, 7.0))
+	_box("roof_red", Vector3(-16.0, 3.25, 18.0), Vector3(9.2, 0.3, 7.6))
+	_box("sign_red", Vector3(-16.0, 2.65, 14.45), Vector3(6.7, 0.55, 0.18))
+	var tea_label := Label3D.new()
+	tea_label.text = "CHAYA KADA"
+	tea_label.font_size = 42
+	tea_label.pixel_size = 0.010
+	tea_label.outline_size = 4
+	tea_label.position = Vector3(-16.0, 2.45, 14.31)
+	tea_label.rotation.y = 0.0
+	tea_label.modulate = Color("#fff0d2")
+	_city_root.add_child(tea_label)
+
+func _flush_static_batches() -> void:
+	for key_variant in _batches.keys():
+		var key := String(key_variant)
+		var shape_id := key.get_slice("|", 0)
+		var material_id := key.get_slice("|", 1)
+		var transforms: Array = _batches[key]
+		if transforms.is_empty():
+			continue
+		var mesh: PrimitiveMesh
+		match shape_id:
+			"sphere":
+				var sphere := SphereMesh.new()
+				sphere.radius = 0.5
+				sphere.height = 1.0
+				sphere.radial_segments = 8
+				sphere.rings = 4
+				mesh = sphere
+			"cylinder":
+				var cylinder := CylinderMesh.new()
+				cylinder.top_radius = 0.36
+				cylinder.bottom_radius = 0.5
+				cylinder.height = 1.0
+				cylinder.radial_segments = 8
+				cylinder.rings = 2
+				mesh = cylinder
+			_:
+				var cube := BoxMesh.new()
+				cube.size = Vector3.ONE
+				mesh = cube
+		mesh.material = _materials[material_id]
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.mesh = mesh
+		multimesh.instance_count = transforms.size()
+		for i in range(transforms.size()):
+			multimesh.set_instance_transform(i, transforms[i])
+		var instance := MultiMeshInstance3D.new()
+		instance.name = "Batch_%s_%s" % [shape_id, material_id]
+		instance.multimesh = multimesh
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_city_root.add_child(instance)
+	_batches.clear()
+
+func _setup_lighting(scene: Node) -> void:
+	var has_sun := not scene.find_children("*", "DirectionalLight3D", true, false).is_empty()
+	if not has_sun:
+		var sun := DirectionalLight3D.new()
+		sun.name = "KochiDaylight"
+		sun.rotation_degrees = Vector3(-48, -28, 0)
+		sun.light_color = Color("#fff0d8")
+		sun.light_energy = 1.0
+		sun.shadow_enabled = false
+		scene.add_child(sun)
+	var has_environment := not scene.find_children("*", "WorldEnvironment", true, false).is_empty()
+	if not has_environment:
+		var environment_node := WorldEnvironment.new()
+		environment_node.name = "KochiAtmosphere"
+		var environment := Environment.new()
+		environment.background_mode = Environment.BG_SKY
+		var sky := Sky.new()
+		var sky_material := ProceduralSkyMaterial.new()
+		sky_material.sky_top_color = Color("#4b6878")
+		sky_material.sky_horizon_color = Color("#c2c4ba")
+		sky_material.ground_bottom_color = Color("#333d3c")
+		sky_material.ground_horizon_color = Color("#a1a9a4")
+		sky.sky_material = sky_material
+		environment.sky = sky
+		environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		environment.ambient_light_color = Color("#a6b4bb")
+		environment.ambient_light_energy = 0.68
+		environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		environment.fog_enabled = true
+		environment.fog_light_color = Color("#aeb9b5")
+		environment.fog_density = 0.0018
+		environment_node.environment = environment
+		scene.add_child(environment_node)
+
+func _build_traffic() -> void:
+	var body_colors := ["car_white", "car_silver", "car_blue", "car_red", "car_green", "car_black"]
+	for i in range(7):
+		var axis := 0 if i < 5 else 1
+		var line := float(_rng.randi_range(-2, 2)) * GRID
+		var direction := 1.0 if i % 2 == 0 else -1.0
+		var lane := ROAD_HALF * 0.43 * (1.0 if direction > 0 else -1.0)
+		var coordinate := -WORLD_EDGE + float(i) * 72.0 + _rng.randf_range(0.0, 28.0)
+		var root := _spawn_vehicle("car", body_colors[i % body_colors.size()])
+		var pos := Vector3(coordinate, 0.03, line + lane) if axis == 0 else Vector3(line + lane, 0.03, coordinate)
+		root.position = pos
+		_city_root.add_child(root)
+		_traffic.append({"root": root, "axis": axis, "line": line, "lane": lane, "direction": direction, "speed": _rng.randf_range(6.0, 10.5)})
+	for i in range(4):
+		var axis := 0 if i < 2 else 1
+		var line := float(_rng.randi_range(-2, 2)) * GRID
+		var direction := -1.0 if i % 2 == 0 else 1.0
+		var lane := ROAD_HALF * 0.18 * (1.0 if direction > 0 else -1.0)
+		var coordinate := float(i) * 125.0 - 210.0
+		var root := _spawn_vehicle("auto", "auto_yellow")
+		var pos := Vector3(coordinate, 0.03, line + lane) if axis == 0 else Vector3(line + lane, 0.03, coordinate)
+		root.position = pos
+		_city_root.add_child(root)
+		_traffic.append({"root": root, "axis": axis, "line": line, "lane": lane, "direction": direction, "speed": _rng.randf_range(4.2, 6.3)})
+	var bus := _spawn_vehicle("bus", "bus_blue")
+	bus.position = Vector3(-150.0, 0.03, -GRID + 3.0)
+	_city_root.add_child(bus)
+	_traffic.append({"root": bus, "axis": 0, "line": -GRID, "lane": 3.0, "direction": 1.0, "speed": 4.5})
+
+func _spawn_vehicle(kind: String, color_id: String) -> Node3D:
+	var root := Node3D.new()
+	root.name = "CityTraffic_" + kind
+	var length := 4.2
+	var width := 1.78
+	var body_height := 0.9
+	var cabin_length := 2.2
+	var cabin_height := 0.78
+	var cabin_width := 1.5
+	if kind == "auto":
+		length = 2.65
+		width = 1.38
+		body_height = 0.9
+		cabin_length = 1.6
+		cabin_height = 0.95
+		cabin_width = 1.25
+	elif kind == "bus":
+		length = 8.2
+		width = 2.35
+		body_height = 1.65
+		cabin_length = 6.5
+		cabin_height = 1.5
+		cabin_width = 2.05
+	_add_vehicle_part(root, color_id, Vector3(0, body_height * 0.72, 0), Vector3(length, body_height, width))
+	_add_vehicle_part(root, "glass", Vector3(-length * 0.03, body_height + cabin_height * 0.35, 0), Vector3(cabin_length, cabin_height, cabin_width))
+	_add_vehicle_part(root, "metal_light", Vector3(length * 0.50, body_height * 0.75, 0), Vector3(0.08, body_height * 0.62, width * 0.83))
+	if kind == "auto":
+		_add_vehicle_part(root, "auto_green", Vector3(0.1, 1.30, 0), Vector3(1.5, 0.9, 1.26))
+		_add_vehicle_part(root, "glass_light", Vector3(0.15, 1.56, 0), Vector3(1.05, 0.5, 1.28))
+	else:
+		_add_vehicle_part(root, "glass_light", Vector3(length * 0.35, body_height + 0.15, 0), Vector3(0.06, 0.42, cabin_width * 0.85))
+		_add_vehicle_part(root, "metal", Vector3(-length * 0.35, body_height + 0.12, 0), Vector3(0.06, 0.42, cabin_width * 0.85))
+	# Wheels are low-sided cylinders, with shared materials.
+	var wheel_positions: Array[Vector3] = []
+	if kind == "bus":
+		for wx in [-length * 0.34, 0.0, length * 0.34]:
+			wheel_positions.append(Vector3(wx, 0.35, -width * 0.48))
+			wheel_positions.append(Vector3(wx, 0.35, width * 0.48))
+	else:
+		for wx in [-length * 0.31, length * 0.31]:
+			wheel_positions.append(Vector3(wx, 0.32, -width * 0.52))
+			wheel_positions.append(Vector3(wx, 0.32, width * 0.52))
+	for wheel_pos in wheel_positions:
+		var wheel_mesh := CylinderMesh.new()
+		wheel_mesh.top_radius = 0.32 if kind != "bus" else 0.42
+		wheel_mesh.bottom_radius = wheel_mesh.top_radius
+		wheel_mesh.height = 0.22
+		wheel_mesh.radial_segments = 8
+		var wheel := MeshInstance3D.new()
+		wheel.mesh = wheel_mesh
+		wheel.material_override = _materials["metal"]
+		wheel.rotation.z = PI * 0.5
+		wheel.position = wheel_pos
+		root.add_child(wheel)
+	# Headlamps and rear lamps remain simple material instances.
+	_add_vehicle_part(root, "lamp_glow", Vector3(length * 0.50, 0.75, -width * 0.32), Vector3(0.10, 0.18, 0.22))
+	_add_vehicle_part(root, "lamp_glow", Vector3(length * 0.50, 0.75, width * 0.32), Vector3(0.10, 0.18, 0.22))
+	return root
+
+func _add_vehicle_part(parent: Node3D, material_id: String, pos: Vector3, size: Vector3) -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	var part := MeshInstance3D.new()
+	part.mesh = mesh
+	part.material_override = _materials[material_id]
+	part.position = pos
+	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(part)
+
+func _update_traffic(delta: float) -> void:
+	for agent in _traffic:
+		var root: Node3D = agent["root"]
+		if not is_instance_valid(root):
+			continue
+		var axis: int = agent["axis"]
+		var direction: float = agent["direction"]
+		var speed: float = agent["speed"]
+		var position := root.position
+		if axis == 0:
+			position.x += direction * speed * delta
+			if position.x > WORLD_EDGE:
+				position.x = -WORLD_EDGE
+			elif position.x < -WORLD_EDGE:
+				position.x = WORLD_EDGE
+		else:
+			position.z += direction * speed * delta
+			if position.z > WORLD_EDGE:
+				position.z = -WORLD_EDGE
+			elif position.z < -WORLD_EDGE:
+				position.z = WORLD_EDGE
+		root.position = position
+		var forward := Vector3(direction, 0, 0) if axis == 0 else Vector3(0, 0, direction)
+		root.rotation.y = atan2(-forward.z, forward.x)
+
+func _build_pedestrians() -> void:
+	var shirts := ["shirt_blue", "shirt_white", "shirt_green", "shirt_maroon", "shirt_ochre"]
+	for i in range(14):
+		var axis := 0 if i < 8 else 1
+		var line := float(_rng.randi_range(-2, 2)) * GRID
+		var side := 1.0 if i % 2 == 0 else -1.0
+		var lane := side * (ROAD_HALF + SIDEWALK_WIDTH * 0.43)
+		var coordinate := _rng.randf_range(-WORLD_EDGE + 5, WORLD_EDGE - 5)
+		var walker := _spawn_pedestrian(shirts[i % shirts.size()], "pants_blue" if i % 3 == 0 else "pants_dark")
+		var pos := Vector3(coordinate, 0.17, line + lane) if axis == 0 else Vector3(line + lane, 0.17, coordinate)
+		walker.position = pos
+		_city_root.add_child(walker)
+		_walkers.append({
+			"root": walker,
+			"axis": axis,
+			"line": line,
+			"lane": lane,
+			"direction": 1.0 if i % 2 == 0 else -1.0,
+			"speed": _rng.randf_range(0.55, 1.15),
+			"phase": _rng.randf_range(0.0, TAU),
+			"left_arm": walker.get_node("LeftArmPivot"),
+			"right_arm": walker.get_node("RightArmPivot"),
+			"left_leg": walker.get_node("LeftLegPivot"),
+			"right_leg": walker.get_node("RightLegPivot")
+		})
+
+func _spawn_pedestrian(shirt_id: String, pants_id: String) -> Node3D:
+	var root := Node3D.new()
+	root.name = "CityPedestrian"
+	_add_ped_part(root, shirt_id, Vector3(0, 1.02, 0), Vector3(0.46, 0.90, 0.28), "box")
+	_add_ped_part(root, "skin", Vector3(0, 1.68, 0), Vector3(0.34, 0.34, 0.34), "sphere")
+	_add_ped_part(root, "hair", Vector3(0, 1.82, 0.01), Vector3(0.34, 0.16, 0.34), "sphere")
+	var left_arm := Node3D.new()
+	left_arm.name = "LeftArmPivot"
+	left_arm.position = Vector3(-0.30, 1.28, 0)
+	root.add_child(left_arm)
+	_add_ped_part(left_arm, shirt_id, Vector3(0, -0.28, 0), Vector3(0.15, 0.64, 0.15), "cylinder")
+	var right_arm := Node3D.new()
+	right_arm.name = "RightArmPivot"
+	right_arm.position = Vector3(0.30, 1.28, 0)
+	root.add_child(right_arm)
+	_add_ped_part(right_arm, shirt_id, Vector3(0, -0.28, 0), Vector3(0.15, 0.64, 0.15), "cylinder")
+	var left_leg := Node3D.new()
+	left_leg.name = "LeftLegPivot"
+	left_leg.position = Vector3(-0.13, 0.62, 0)
+	root.add_child(left_leg)
+	_add_ped_part(left_leg, pants_id, Vector3(0, -0.27, 0), Vector3(0.16, 0.66, 0.16), "cylinder")
+	var right_leg := Node3D.new()
+	right_leg.name = "RightLegPivot"
+	right_leg.position = Vector3(0.13, 0.62, 0)
+	root.add_child(right_leg)
+	_add_ped_part(right_leg, pants_id, Vector3(0, -0.27, 0), Vector3(0.16, 0.66, 0.16), "cylinder")
+	return root
+
+func _add_ped_part(parent: Node3D, material_id: String, pos: Vector3, size: Vector3, shape_type: String) -> void:
+	var mesh: PrimitiveMesh
+	match shape_type:
+		"sphere":
+			var sphere := SphereMesh.new()
+			sphere.radius = 0.5
+			sphere.height = 1.0
+			sphere.radial_segments = 8
+			sphere.rings = 4
+			mesh = sphere
+		"cylinder":
+			var cylinder := CylinderMesh.new()
+			cylinder.top_radius = 0.5
+			cylinder.bottom_radius = 0.5
+			cylinder.height = 1.0
+			cylinder.radial_segments = 6
+			mesh = cylinder
+		_:
+			var cube := BoxMesh.new()
+			cube.size = Vector3.ONE
+			mesh = cube
+	mesh.material = _materials[material_id]
+	var part := MeshInstance3D.new()
+	part.mesh = mesh
+	part.position = pos
+	part.scale = size
+	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(part)
+
+func _update_walkers(delta: float) -> void:
+	for agent in _walkers:
+		var root: Node3D = agent["root"]
+		if not is_instance_valid(root):
+			continue
+		var direction: float = agent["direction"]
+		var axis: int = agent["axis"]
+		var speed: float = agent["speed"]
+		var position := root.position
+		if axis == 0:
+			position.x += direction * speed * delta
+			if position.x > WORLD_EDGE:
+				position.x = -WORLD_EDGE
+			elif position.x < -WORLD_EDGE:
+				position.x = WORLD_EDGE
+		else:
+			position.z += direction * speed * delta
+			if position.z > WORLD_EDGE:
+				position.z = -WORLD_EDGE
+			elif position.z < -WORLD_EDGE:
+				position.z = WORLD_EDGE
+		root.position = position
+		var forward := Vector3(direction, 0, 0) if axis == 0 else Vector3(0, 0, direction)
+		root.look_at(root.position + forward, Vector3.UP)
+		var phase := _clock * speed * 6.5 + float(agent["phase"])
+		var swing := sin(phase) * 0.38
+		var left_arm: Node3D = agent["left_arm"]
+		var right_arm: Node3D = agent["right_arm"]
+		var left_leg: Node3D = agent["left_leg"]
+		var right_leg: Node3D = agent["right_leg"]
+		left_arm.rotation.x = swing
+		right_arm.rotation.x = -swing
+		left_leg.rotation.x = -swing * 0.85
+		right_leg.rotation.x = swing * 0.85
