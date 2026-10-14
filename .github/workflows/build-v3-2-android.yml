@@ -115,7 +115,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: kochi-homecoming-v0.3.2-build-${{ github.run_number }}
-          name: Kochi: Homecoming v0.3.2 Android debug build
+          name: "Kochi: Homecoming v0.3.2 Android debug build"
           prerelease: true
           generate_release_notes: true
           files: out/Kochi-Homecoming-v0.3.2-debug.apk
