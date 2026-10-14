@@ -249,6 +249,9 @@ func _sphere(material_id: String, position: Vector3, size: Vector3, rotation: Ve
 
 func _build_ground_and_roads() -> void:
 	_box("ground_concrete", Vector3(0, -0.43, 0), Vector3(WORLD_SIZE, 0.55, WORLD_SIZE))
+	# The city is rendered with batched MultiMeshes, which have no collision by themselves.
+	# Add one world-sized static floor so the player and vehicles cannot fall through roads.
+	_add_static_collision(Vector3(0, -0.165, 0), Vector3(WORLD_SIZE, 0.55, WORLD_SIZE))
 	var extent := GRID * 4.0
 	var road_length := GRID * 8.0 + ROAD_WIDTH
 	var section_length := road_length / 4.0

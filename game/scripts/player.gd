@@ -55,7 +55,7 @@ func _physics_process(delta: float) -> void:
 		camera_pivot.rotation.y = wrapf(yaw - rotation.y, -PI, PI)
 	move_and_slide()
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed and event.position.x > get_viewport().get_visible_rect().size.x * 0.48 and look_touch_id == -1:
 			look_touch_id = event.index
