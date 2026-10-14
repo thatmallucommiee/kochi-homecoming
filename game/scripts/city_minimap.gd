@@ -99,7 +99,7 @@ func _draw() -> void:
 		player_pos = _player.global_position
 
 	# Subtle block parcels imply a dense urban street layout beneath the road network.
-	var half_range := MAP_RANGE_METERS * 0.5
+	var half_range := view_range * 0.5
 	var first_x := int(floor((player_pos.x - half_range) / GRID_SIZE)) - 1
 	var last_x := int(ceil((player_pos.x + half_range) / GRID_SIZE)) + 1
 	var first_z := int(floor((player_pos.z - half_range) / GRID_SIZE)) - 1
