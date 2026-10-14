@@ -61,20 +61,20 @@ game = game.replace(
     "vector = Vector2((event.position - global_position - origin).x, -(event.position - global_position - origin).y).limit_length(radius) / radius",
     "var drag := event.position - origin\n\t\t\t\tvector = Vector2(drag.x, -drag.y).limit_length(radius) / radius"
 )
-old = '''func _process(_delta: float) -> void:
-		if finger_id != -1:
-			var p := get_parent().get_parent()
-			if p.has_node("Vivek"):
-				var actor = p.get_node("Vivek")
-				actor.set("touch_move", vector)
-		queue_redraw()
+old = '''\tfunc _process(_delta: float) -> void:
+\t\tif finger_id != -1:
+\t\t\tvar p := get_parent().get_parent()
+\t\t\tif p.has_node("Vivek"):
+\t\t\t\tvar actor = p.get_node("Vivek")
+\t\t\t\tactor.set("touch_move", vector)
+\t\tqueue_redraw()
 '''
-new = '''func _process(_delta: float) -> void:
-		var p := get_parent().get_parent()
-		if p.has_node("Vivek"):
-			var actor = p.get_node("Vivek")
-			actor.set("touch_move", vector if finger_id != -1 else Vector2.ZERO)
-		queue_redraw()
+new = '''\tfunc _process(_delta: float) -> void:
+\t\tvar p := get_parent().get_parent()
+\t\tif p.has_node("Vivek"):
+\t\t\tvar actor = p.get_node("Vivek")
+\t\t\tactor.set("touch_move", vector if finger_id != -1 else Vector2.ZERO)
+\t\tqueue_redraw()
 '''
 if old not in game:
     raise SystemExit("Could not safely locate joystick _process() to fix release handling")
