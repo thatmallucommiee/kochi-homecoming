@@ -38,6 +38,7 @@ jobs:
           mkdir -p "$GODOT_PROJECT_DIR/scripts"
           cp "$GITHUB_WORKSPACE/game/scripts/mission_director.gd" "$GODOT_PROJECT_DIR/scripts/mission_director.gd"
           cp "$GITHUB_WORKSPACE/game/scripts/city_world.gd" "$GODOT_PROJECT_DIR/scripts/city_world.gd"
+          cp "$GITHUB_WORKSPACE/game/scripts/city_minimap.gd" "$GODOT_PROJECT_DIR/scripts/city_minimap.gd"
           mkdir -p "$GODOT_PROJECT_DIR/assets/textures" "$GODOT_PROJECT_DIR/shaders"
           cp "$GITHUB_WORKSPACE/game/assets/textures/"*.svg "$GODOT_PROJECT_DIR/assets/textures/"
           cp "$GITHUB_WORKSPACE/game/shaders/triplanar_city.gdshader" "$GODOT_PROJECT_DIR/shaders/triplanar_city.gdshader"
