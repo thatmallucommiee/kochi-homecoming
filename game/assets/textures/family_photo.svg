@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d2c1a0"/><stop offset="1" stop-color="#a38f70"/></linearGradient>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c0c0a7"/><stop offset="1" stop-color="#ead8ad"/></linearGradient>
+</defs>
+<rect width="512" height="512" fill="url(#paper)"/>
+<rect x="24" y="24" width="464" height="464" rx="2" fill="#7f6c52"/>
+<rect x="42" y="42" width="428" height="428" fill="url(#sky)"/>
+<circle cx="381" cy="105" r="48" fill="#e0d2ae" opacity=".62"/>
+<path d="M42 278 Q100 244 160 270 T282 263 T470 270 V470 H42Z" fill="#8f9d76"/>
+<rect x="85" y="190" width="240" height="150" fill="#d0b891"/>
+<path d="M65 199 L205 116 L347 199Z" fill="#895f46"/>
+<rect x="113" y="224" width="54" height="58" fill="#60726e"/>
+<rect x="237" y="224" width="54" height="58" fill="#60726e"/>
+<rect x="190" y="264" width="45" height="76" fill="#634c38"/>
+<path d="M48 356 Q126 323 193 355 T330 354 T470 352 V470 H42Z" fill="#68785b"/>
+<!-- Adult silhouette -->
+<ellipse cx="166" cy="229" rx="34" ry="39" fill="#3e3830"/>
+<path d="M116 278 Q125 258 146 257 H186 Q208 263 218 288 L235 393 H105Z" fill="#555c55"/>
+<path d="M130 292 L99 367 L119 377 L151 320Z M192 292 L218 357 L201 367 L171 319Z" fill="#3e4943"/>
+<!-- Young boy silhouette -->
+<ellipse cx="305" cy="290" rx="24" ry="28" fill="#514338"/>
+<path d="M270 324 Q285 312 305 314 Q328 313 341 333 L355 416 H256Z" fill="#7d6750"/>
+<path d="M280 337 L265 390 L281 397 L299 352Z M326 337 L342 386 L326 394 L310 354Z" fill="#5b5043"/>
+<rect x="55" y="440" width="402" height="13" fill="#846e50" opacity=".65"/>
+<g opacity=".26" fill="#6f5943"><circle cx="90" cy="83" r="3"/><circle cx="417" cy="412" r="4"/><circle cx="389" cy="187" r="2"/><circle cx="125" cy="408" r="3"/></g>
+<path d="M30 30 L476 482 M492 65 L61 449" stroke="#f6e5c0" stroke-width="3" opacity=".12"/>
+<rect x="42" y="42" width="428" height="428" fill="none" stroke="#4f4436" stroke-width="6" opacity=".55"/>
+</svg>
