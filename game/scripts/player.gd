@@ -30,9 +30,9 @@ func _physics_process(delta: float) -> void:
 		move = touch_move
 	move = move.limit_length(1.0)
 
-	# Godot's input vector has negative Y for forward. Convert it to local +Z
-	# before applying the camera yaw basis, because the camera looks along local -Z.
-	var direction := Vector3(move.x, 0.0, -move.y)
+	# Godot's input vector has negative Y for forward, matching world/local -Z.
+	# Rotate only around Y so camera pitch never pushes the player into the ground.
+	var direction := Vector3(move.x, 0.0, move.y)
 	if camera_pivot:
 		var yaw_basis := Basis(Vector3.UP, camera_pivot.global_rotation.y)
 		direction = yaw_basis * direction
