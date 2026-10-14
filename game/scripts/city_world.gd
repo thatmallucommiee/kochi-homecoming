@@ -81,7 +81,9 @@ func _install_city(scene: Node) -> void:
 	_build_story_landmarks()
 	_flush_static_batches()
 	_build_traffic()
+	_build_parked_vehicles()
 	_build_pedestrians()
+	_build_idle_citizens()
 	_setup_lighting(scene)
 	_built = true
 	print("KochiLivingDistrict ready: dense procedural neighborhood, road grid, buildings, traffic and pedestrians.")
@@ -1149,6 +1151,88 @@ func _update_traffic(delta: float) -> void:
 		root.position = position
 		var forward := Vector3(direction, 0, 0) if axis == 0 else Vector3(0, 0, direction)
 		root.rotation.y = atan2(-forward.z, forward.x)
+
+func _build_parked_vehicles() -> void:
+	# Curbside parking and two-wheelers make the street feel used even between traffic passes.
+	var parked_cars: Array[Dictionary] = [
+		{"position": Vector3(-29.0, 0.03, 12.3), "color": "car_silver"},
+		{"position": Vector3(-5.0, 0.03, 12.6), "color": "car_white"},
+		{"position": Vector3(21.0, 0.03, 12.4), "color": "car_blue"},
+		{"position": Vector3(70.0, 0.03, 12.7), "color": "car_green"},
+		{"position": Vector3(111.0, 0.03, 12.2), "color": "car_white"},
+		{"position": Vector3(-64.0, 0.03, -83.0), "color": "car_red"}
+	]
+	for data in parked_cars:
+		var car := _spawn_vehicle("car", str(data["color"]))
+		car.name = "ParkedCar"
+		car.position = data["position"]
+		_city_root.add_child(car)
+		var body := StaticBody3D.new()
+		body.name = "ParkedVehicleCollision"
+		body.position = Vector3(0, 0.68, 0)
+		var collision := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(4.2, 1.35, 1.9)
+		collision.shape = shape
+		body.add_child(collision)
+		car.add_child(body)
+	for i in range(6):
+		var bike := _spawn_vehicle("bike", "car_black" if i % 2 == 0 else "car_red")
+		bike.name = "ParkedScooter"
+		bike.position = Vector3(-39.0 + float(i) * 1.7, 0.03, 13.6)
+		bike.rotation.y = PI * 0.5
+		_city_root.add_child(bike)
+		var body := StaticBody3D.new()
+		body.name = "ParkedScooterCollision"
+		body.position = Vector3(0, 0.55, 0)
+		var collision := CollisionShape3D.new()
+		var shape := CapsuleShape3D.new()
+		shape.radius = 0.40
+		shape.height = 1.8
+		collision.shape = shape
+		body.add_child(collision)
+		bike.add_child(body)
+
+func _build_idle_citizens() -> void:
+	# Rafi is visible outside the garage; tea-stall customers stand nearby.
+	var rafi := _spawn_pedestrian("shirt_green", "pants_dark")
+	rafi.name = "RafiStoryCharacter"
+	rafi.position = Vector3(51.0, 0.17, 36.0)
+	rafi.rotation.y = PI
+	_city_root.add_child(rafi)
+	_add_citizen_collision(rafi.global_position, 0.30, 1.75)
+	var tea_customer_a := _spawn_pedestrian("shirt_white", "pants_blue")
+	tea_customer_a.name = "TeaStallCustomerA"
+	tea_customer_a.position = Vector3(-44.0, 0.17, 42.0)
+	tea_customer_a.rotation.y = -PI * 0.5
+	_city_root.add_child(tea_customer_a)
+	_add_citizen_collision(tea_customer_a.global_position, 0.30, 1.75)
+	var tea_customer_b := _spawn_pedestrian("shirt_maroon", "pants_dark")
+	tea_customer_b.name = "TeaStallCustomerB"
+	tea_customer_b.position = Vector3(-52.0, 0.17, 41.5)
+	tea_customer_b.rotation.y = PI * 0.5
+	_city_root.add_child(tea_customer_b)
+	_add_citizen_collision(tea_customer_b.global_position, 0.30, 1.75)
+	# Several quiet street-side figures and one vendor near a corner shop.
+	for i in range(5):
+		var citizen := _spawn_pedestrian("shirt_ochre" if i % 2 == 0 else "shirt_blue", "pants_dark")
+		citizen.name = "IdleStreetCitizen_%02d" % i
+		citizen.position = Vector3(100.0 + float(i % 3) * 2.2, 0.17, 14.5 + float(i / 3) * 1.4)
+		citizen.rotation.y = float(i % 4) * PI * 0.5
+		_city_root.add_child(citizen)
+		_add_citizen_collision(citizen.global_position, 0.28, 1.7)
+
+func _add_citizen_collision(position: Vector3, radius: float, height: float) -> void:
+	var body := StaticBody3D.new()
+	body.name = "CitizenCollision"
+	body.position = position + Vector3(0, height * 0.5, 0)
+	var collision := CollisionShape3D.new()
+	var shape := CapsuleShape3D.new()
+	shape.radius = radius
+	shape.height = height
+	collision.shape = shape
+	body.add_child(collision)
+	_city_root.add_child(body)
 
 func _build_pedestrians() -> void:
 	var shirts := ["shirt_blue", "shirt_white", "shirt_green", "shirt_maroon", "shirt_ochre"]
