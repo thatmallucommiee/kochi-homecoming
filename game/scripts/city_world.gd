@@ -1285,6 +1285,7 @@ func _build_idle_citizens() -> void:
 
 	# Additional commuters and neighbours are distributed around separate blocks,
 	# rather than clustering all visible life around the starting street.
+	var neighbour_shirts := ["shirt_blue", "shirt_white", "shirt_green", "shirt_maroon", "shirt_ochre"]
 	for i in range(8):
 		var axis := i % 2
 		var road_index := (i % 7) - 3
@@ -1298,7 +1299,7 @@ func _build_idle_citizens() -> void:
 			along += 28.0
 			position = Vector3(along, 0.17, line + side * (ROAD_HALF + SIDEWALK_WIDTH * 0.52)) if axis == 0 else Vector3(line + side * (ROAD_HALF + SIDEWALK_WIDTH * 0.52), 0.17, along)
 			attempts += 1
-		var neighbour := _spawn_pedestrian(shirts[i % shirts.size()], "pants_blue" if i % 3 == 0 else "pants_dark")
+		var neighbour := _spawn_pedestrian(neighbour_shirts[i % neighbour_shirts.size()], "pants_blue" if i % 3 == 0 else "pants_dark")
 		neighbour.name = "Neighbour_%02d" % i
 		neighbour.position = position
 		neighbour.rotation.y = float((i + 1) % 4) * PI * 0.5
