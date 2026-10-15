@@ -168,8 +168,8 @@ jobs:
               "left-anchored steering-button helper"
           )
           replace_once(
-              "    var center := joystick.global_position + Vector2(78, 78)",
-              "    var center := Vector2(78, 78)",
+              "joystick.global_position + Vector2(78, 78)",
+              "Vector2(78, 78)",
               "joystick local-space centre"
           )
           replace_once(
