@@ -130,24 +130,47 @@ jobs:
           set -euo pipefail
           python3 - "$PROJECT_DIR/project.godot" "$PROJECT_DIR/export_presets.cfg" <<'PY'
           from pathlib import Path
-          import re, sys
+          import sys
+
           project = Path(sys.argv[1])
-          text = project.read_text()
-          key = "textures/vram_compression/import_etc2_astc"
-          # Remove prior malformed attempts and any duplicate setting.
-          text = re.sub(r'(?m)^textures/vram_compression/import_etc2_astc=.*(?:\\n)?\\s*', '', text)
-          text = re.sub(r'(?m)^\\[rendering\\][ \\t]*$', '[rendering]', text)
-          if "[rendering]" not in text:
-              text += "\\n[rendering]"
-          text = text.replace("[rendering]", "[rendering]" + chr(10) + key + "=true", 1)
-          project.write_text(text)
-          # Fail immediately unless Godot's INI file has a real standalone setting.
-          check = project.read_text()
-          assert re.search(r'(?m)^\\[rendering\\]$.*?^textures/vram_compression/import_etc2_astc=true$', check, re.S), "ETC2 setting not written as valid project setting"
+          lines = project.read_text().splitlines()
+          setting_name = "textures/vram_compression/import_etc2_astc"
+          wanted = setting_name + "=true"
+
+          # Repair literal escape sequences left by earlier patches, then
+          # rebuild this setting as a clean, standalone project.godot line.
+          cleaned = []
+          for line in lines:
+              line = line.replace("\\n[rendering]", "")
+              if line.startswith(setting_name + "="):
+                  continue
+              if line.strip() == "[rendering]":
+                  cleaned.append("[rendering]")
+              elif line.strip():
+                  cleaned.append(line)
+
+          section_indexes = [i for i, line in enumerate(cleaned) if line == "[rendering]"]
+          if not section_indexes:
+              cleaned.extend(["", "[rendering]"])
+              section_indexes = [len(cleaned) - 1]
+
+          # Ensure one rendering header, and put the setting directly under it.
+          first = section_indexes[0]
+          cleaned = [line for i, line in enumerate(cleaned) if line != "[rendering]" or i == first]
+          first = cleaned.index("[rendering]")
+          cleaned.insert(first + 1, wanted)
+          project.write_text("\n".join(cleaned) + "\n")
+
+          verified = project.read_text().splitlines()
+          idx = verified.index("[rendering]")
+          next_section = next((i for i in range(idx + 1, len(verified)) if verified[i].startswith("[")), len(verified))
+          assert wanted in verified[idx + 1:next_section], "ETC2/ASTC setting is not inside [rendering]"
+
           preset = Path(sys.argv[2])
-          data = preset.read_text().replace("gradle_build/compress_native_libraries=true", "gradle_build/compress_native_libraries=false")
+          data = preset.read_text()
+          data = data.replace("gradle_build/compress_native_libraries=true", "gradle_build/compress_native_libraries=false")
           preset.write_text(data)
-          print("Validated real ETC2/ASTC setting in project.godot.")
+          print("Validated ETC2/ASTC setting under the [rendering] section.")
           PY
 
       - name: Import and validate Godot project
