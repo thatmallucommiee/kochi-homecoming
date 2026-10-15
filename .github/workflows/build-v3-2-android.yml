@@ -251,6 +251,122 @@ jobs:
           print("Applied mobile-control fixes: local-space joystick, dedicated left-side steering controls, and touch-state reset.")
           PY
 
+      - name: Improve sedan visual detail and daylight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/scripts/vehicle_controller.gd" "$PROJECT_DIR/scripts/game.gd" <<'PY'
+          from pathlib import Path
+          import sys
+
+          vehicle_path = Path(sys.argv[1])
+          s = vehicle_path.read_text(encoding="utf-8")
+          expected = "    cabin.material_override = glass\n    add_child(cabin)\n    for side in [-1.0, 1.0]:"
+          if expected not in s:
+              raise SystemExit("Vehicle visual source changed; refusing to patch an unknown layout.")
+
+          detail = """    cabin.material_override = glass
+              add_child(cabin)
+              # Distinct body planes break up the single-box silhouette.
+              _add_detail_box("Hood", Vector3(1.68, 0.14, 1.22), Vector3(0, 0.965, -1.02), Color.BLACK, true)
+              _add_detail_box("Trunk", Vector3(1.62, 0.13, 0.78), Vector3(0, 0.96, 1.20), Color.BLACK, true)
+              _add_detail_box("Roof", Vector3(1.30, 0.13, 1.22), Vector3(0, 1.51, -0.19), Color.BLACK, true)
+
+              var window_mat := StandardMaterial3D.new()
+              window_mat.albedo_color = Color(0.055, 0.12, 0.15)
+              window_mat.metallic = 0.28
+              window_mat.roughness = 0.2
+              _add_detail_box("FrontWindshield", Vector3(1.16, 0.30, 0.035), Vector3(0, 1.28, -1.055), Color(0.055, 0.12, 0.15))
+              _add_detail_box("RearWindshield", Vector3(1.12, 0.27, 0.035), Vector3(0, 1.27, 0.685), Color(0.055, 0.12, 0.15))
+              for side in [-1.0, 1.0]:
+                  var side_window_front := _add_detail_box("FrontSideWindow", Vector3(0.035, 0.29, 0.62), Vector3(side * 0.725, 1.29, -0.63), Color(0.055, 0.12, 0.15))
+                  var side_window_rear := _add_detail_box("RearSideWindow", Vector3(0.035, 0.29, 0.58), Vector3(side * 0.725, 1.29, 0.23), Color(0.055, 0.12, 0.15))
+                  _add_detail_box("WindowPillar", Vector3(0.045, 0.42, 0.075), Vector3(side * 0.735, 1.30, -0.12), Color(0.025, 0.035, 0.04))
+                  _add_detail_box("DoorHandle", Vector3(0.035, 0.045, 0.20), Vector3(side * 0.966, 0.92, 0.25), Color(0.66, 0.69, 0.68), false)
+
+              _add_detail_box("FrontBumper", Vector3(1.94, 0.14, 0.16), Vector3(0, 0.39, -1.84), Color(0.07, 0.08, 0.085))
+              _add_detail_box("RearBumper", Vector3(1.94, 0.14, 0.16), Vector3(0, 0.39, 1.84), Color(0.07, 0.08, 0.085))
+              _add_detail_box("FrontGrille", Vector3(0.60, 0.20, 0.035), Vector3(0, 0.64, -1.855), Color(0.018, 0.025, 0.028))
+              for bar_y in [0.59, 0.64, 0.69]:
+                  _add_detail_box("GrilleSlat", Vector3(0.52, 0.018, 0.045), Vector3(0, bar_y, -1.878), Color(0.26, 0.30, 0.31))
+              for side in [-1.0, 1.0]:
+                  _add_detail_box("Headlamp", Vector3(0.34, 0.15, 0.05), Vector3(side * 0.62, 0.77, -1.84), Color(0.96, 0.84, 0.61))
+                  _add_detail_box("TailLamp", Vector3(0.24, 0.17, 0.05), Vector3(side * 0.68, 0.75, 1.84), Color(0.72, 0.055, 0.035))
+                  _add_detail_box("SideMirror", Vector3(0.15, 0.11, 0.20), Vector3(side * 0.84, 1.11, -0.69), Color.BLACK, true)
+                  _add_detail_box("PlateBoltTrim", Vector3(0.42, 0.10, 0.03), Vector3(0, 0.50, -1.87), Color(0.76, 0.79, 0.73))
+          """
+          # This is a textual replacement preserving the existing wheel loop.
+          replacement = detail + "    for side in [-1.0, 1.0]:"
+          s = s.replace(expected, replacement, 1)
+
+          # Reuse the body paint material for painted panels so tint changes affect the whole car.
+          helper = """
+          func _add_detail_box(node_name: String, box_size: Vector3, at: Vector3, color: Color, use_paint: bool = false) -> MeshInstance3D:
+              var part := MeshInstance3D.new()
+              part.name = node_name
+              var mesh := BoxMesh.new()
+              mesh.size = box_size
+              part.mesh = mesh
+              part.position = at
+              if use_paint and paint_material != null:
+                  part.material_override = paint_material
+              else:
+                  var material := StandardMaterial3D.new()
+                  material.albedo_color = color
+                  material.roughness = 0.48
+                  material.metallic = 0.05
+                  part.material_override = material
+              add_child(part)
+              return part
+
+          """
+          signature = "func set_driver(value) -> void:\n"
+          if signature not in s:
+              raise SystemExit("Could not locate vehicle helper insertion point.")
+          s = s.replace(signature, helper + signature, 1)
+
+          # Add brushed-metal hub faces on the four existing wheels.
+          wheel_marker = "            wheel.material_override = rubber\n            add_child(wheel)"
+          wheel_detail = """            wheel.material_override = rubber
+                      add_child(wheel)
+                      var hub := MeshInstance3D.new()
+                      hub.name = "WheelHub"
+                      var hub_mesh := CylinderMesh.new()
+                      hub_mesh.top_radius = 0.16
+                      hub_mesh.bottom_radius = 0.16
+                      hub_mesh.height = 0.035
+                      hub.mesh = hub_mesh
+                      hub.rotation.z = PI / 2.0
+                      hub.position = Vector3(side * 1.09, 0.31, z)
+                      var hub_mat := StandardMaterial3D.new()
+                      hub_mat.albedo_color = Color(0.48, 0.52, 0.54)
+                      hub_mat.metallic = 0.62
+                      hub_mat.roughness = 0.32
+                      hub.material_override = hub_mat
+                      add_child(hub)"""
+          if wheel_marker not in s:
+              raise SystemExit("Could not locate the wheel material block.")
+          s = s.replace(wheel_marker, wheel_detail, 1)
+          vehicle_path.write_text(s, encoding="utf-8")
+
+          game_path = Path(sys.argv[2])
+          g = game_path.read_text(encoding="utf-8")
+          replacements = {
+              "env.background_color = Color(0.035, 0.055, 0.075)": "env.background_color = Color(0.31, 0.48, 0.59)",
+              "env.ambient_light_color = Color(0.48, 0.56, 0.63)": "env.ambient_light_color = Color(0.67, 0.71, 0.72)",
+              "env.ambient_light_energy = 0.65": "env.ambient_light_energy = 0.82",
+              "env.fog_light_color = Color(0.4, 0.49, 0.56)": "env.fog_light_color = Color(0.55, 0.65, 0.70)",
+              "env.fog_density = 0.006": "env.fog_density = 0.0022",
+              "sun.light_energy = 1.0": "sun.light_energy = 1.18",
+          }
+          for old, new in replacements.items():
+              if old not in g:
+                  raise SystemExit("Could not locate graphics setting: " + old)
+              g = g.replace(old, new, 1)
+          game_path.write_text(g, encoding="utf-8")
+          print("Added sedan exterior details and improved daytime visibility.")
+          PY
+
       - name: Run static and drivetrain checks
         shell: bash
         run: |
