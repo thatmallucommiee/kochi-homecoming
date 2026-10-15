@@ -251,7 +251,7 @@ jobs:
               marker
               + 'hud = (root / "scripts/hud.gd").read_text(encoding="utf-8")\n'
               + 'assert "pad.gui_input.connect(_on_joystick.bind(pad))" in hud, "joystick must use pad-local coordinates"\n'
-              + 'assert "pos - Vector2(78, 78)" in hud, "joystick must map both axes from its local centre"\n'
+              + 'assert "var center := Vector2(78, 78)" in hud and "(pos - center)" in hud, "joystick must map both axes from its local centre"\n'
               + 'assert "_left_bottom_button(\\"◀ LEFT\\"" in hud and "_left_bottom_button(\\"RIGHT ▶\\"" in hud, "vehicle steering buttons missing"\n'
               + 'assert "_sync_vehicle_steering()" in hud, "vehicle steering input handler missing"\n'
           )
@@ -279,7 +279,7 @@ jobs:
           assert axis(78, 130) == (0.0, 1.0), "down must move backward"
           assert axis(26, 78) == (-1.0, 0.0), "left must remain left"
           assert axis(130, 78) == (1.0, 0.0), "right must remain right"
-          assert "pos - Vector2(78, 78)" in hud
+          assert "var center := Vector2(78, 78)" in hud and "(pos - center)" in hud
           assert "_left_bottom_button(\\"◀ LEFT\\"" in hud
           assert "_left_bottom_button(\\"RIGHT ▶\\"" in hud
           assert "vehicle_steer_left_held = true" in hud and "vehicle_steer_right_held = true" in hud
