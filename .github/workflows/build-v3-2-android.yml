@@ -51,6 +51,27 @@ jobs:
           missions.write_text(text)
           PY
 
+      - name: Fix remaining Godot 4.7 inferred types
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/scripts/game.gd" <<'PY'
+          from pathlib import Path
+          import re, sys
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          fixes = [
+              (r'(?m)^([ \\t]*)var bx :=', r'\\1var bx: float ='),
+              (r'(?m)^([ \\t]*)var wx :=', r'\\1var wx: float ='),
+              (r'(?m)^([ \\t]*)var d :=', r'\\1var d: float ='),
+              (r'(?m)^([ \\t]*)var spawn_pos :=', r'\\1var spawn_pos: Vector3 ='),
+          ]
+          for pattern, replacement in fixes:
+              s, n = re.subn(pattern, replacement, s)
+              print(f"{pattern}: fixed {n}")
+          p.write_text(s)
+          PY
+
       - name: Run static and drivetrain checks
         shell: bash
         run: |
