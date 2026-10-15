@@ -1,1 +1,1 @@
-Rebuild v3.2 after explicit typing fixes in scripts/game.gd. Source assembly step applies build-patches/fix-game-parse.py before running engine validation.
+Rebuild requested after Godot 4.7 typing fixes in game/player/mission scripts.
