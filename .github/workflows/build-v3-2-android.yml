@@ -371,27 +371,41 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - "$PROJECT_DIR/scripts/player_controller.gd" "$PROJECT_DIR/scripts/game.gd" <<'PY'
+          python3 - "$PROJECT_DIR/scripts/player_controller.gd" "$PROJECT_DIR/scripts/game.gd" "$PROJECT_DIR/tools" <<'PY'
           from pathlib import Path
           import sys
 
+          def replace_once(source: str, old: str, new: str, reason: str) -> str:
+              if old not in source:
+                  raise SystemExit("Could not apply visual pass: " + reason)
+              return source.replace(old, new, 1)
+
+          def insert_after_line(source: str, contains: str, additions: list[str], reason: str, start_at: str = "") -> str:
+              lines = source.splitlines()
+              begin = 0
+              if start_at:
+                  for j, line in enumerate(lines):
+                      if start_at in line:
+                          begin = j
+                          break
+                  else:
+                      raise SystemExit("Could not locate section for " + reason)
+              for i in range(begin, len(lines)):
+                  if contains in lines[i]:
+                      indent = lines[i][:len(lines[i]) - len(lines[i].lstrip())]
+                      lines[i + 1:i + 1] = [indent + item for item in additions]
+                      return "\n".join(lines) + "\n"
+              raise SystemExit("Could not locate insertion line for " + reason)
+
           player_path = Path(sys.argv[1])
           p = player_path.read_text(encoding="utf-8")
+          p = replace_once(p, "clothes.albedo_color = Color(0.07, 0.12, 0.16)", "clothes.albedo_color = Color(0.13, 0.19, 0.22)", "shirt material")
+          p = p.replace("material.albedo_color = Color(0.07, 0.12, 0.16)", "material.albedo_color = Color(0.13, 0.19, 0.22)", 1)
 
-          # Increase silhouette separation and distinguish trousers from the shirt.
-          p = p.replace("clothes.albedo_color = Color(0.07, 0.12, 0.16)", "clothes.albedo_color = Color(0.13, 0.19, 0.22)", 1)
-          p = p.replace('''    skin.albedo_color = Color(0.45, 0.29, 0.21)
-              head.material_override = skin
-              visual_root.add_child(head)
-              arm_l = _make_limb(Vector3(-0.4, 1.08, 0), clothes, 0.11, 0.82)
-              arm_r = _make_limb(Vector3(0.4, 1.08, 0), clothes, 0.11, 0.82)
-              leg_l = _make_limb(Vector3(-0.17, 0.43, 0), clothes, 0.13, 0.8)
-              leg_r = _make_limb(Vector3(0.17, 0.43, 0), clothes, 0.13, 0.8)''',
-              '''    skin.albedo_color = Color(0.45, 0.29, 0.21)
-              head.material_override = skin
-              visual_root.add_child(head)
-
-              # Small facial and clothing landmarks improve readability at gameplay distance.
+          p = replace_once(
+              p,
+              "    visual_root.add_child(head)\n    arm_l = _make_limb(Vector3(-0.4, 1.08, 0), clothes, 0.11, 0.82)",
+              """    visual_root.add_child(head)
               _detail_sphere("Hair", Vector3(0, 1.925, 0.015), Vector3(0.40, 0.20, 0.42), Color(0.035, 0.027, 0.022))
               _detail_sphere("Beard", Vector3(0, 1.655, -0.174), Vector3(0.22, 0.13, 0.075), Color(0.07, 0.045, 0.032))
               _detail_sphere("Nose", Vector3(0, 1.765, -0.224), Vector3(0.055, 0.075, 0.045), skin.albedo_color)
@@ -401,17 +415,24 @@ jobs:
               var trousers := StandardMaterial3D.new()
               trousers.albedo_color = Color(0.075, 0.09, 0.105)
               trousers.roughness = 0.91
-              arm_l = _make_limb(Vector3(-0.4, 1.08, 0), clothes, 0.11, 0.82)
-              arm_r = _make_limb(Vector3(0.4, 1.08, 0), clothes, 0.11, 0.82)
-              leg_l = _make_limb(Vector3(-0.17, 0.43, 0), trousers, 0.13, 0.8)
-              leg_r = _make_limb(Vector3(0.17, 0.43, 0), trousers, 0.13, 0.8)
+              arm_l = _make_limb(Vector3(-0.4, 1.08, 0), clothes, 0.11, 0.82)""",
+              "character face and limb material"
+          )
+          p = replace_once(
+              p,
+              "    leg_l = _make_limb(Vector3(-0.17, 0.43, 0), clothes, 0.13, 0.8)",
+              "    leg_l = _make_limb(Vector3(-0.17, 0.43, 0), trousers, 0.13, 0.8)",
+              "left trouser material"
+          )
+          p = replace_once(
+              p,
+              "    leg_r = _make_limb(Vector3(0.17, 0.43, 0), clothes, 0.13, 0.8)",
+              """    leg_r = _make_limb(Vector3(0.17, 0.43, 0), trousers, 0.13, 0.8)
               _detail_box("LeftShoe", Vector3(0.22, 0.12, 0.33), Vector3(-0.17, 0.085, -0.07), Color(0.025, 0.03, 0.032))
-              _detail_box("RightShoe", Vector3(0.22, 0.12, 0.33), Vector3(0.17, 0.085, -0.07), Color(0.025, 0.03, 0.032))''', 1)
-
-          helper_marker = "func _make_limb(pos: Vector3, mat: Material, radius: float, height: float) -> MeshInstance3D:\n"
-          if helper_marker not in p:
-              raise SystemExit("Could not locate character detail helpers.")
-          helpers = """func _detail_sphere(node_name: String, at: Vector3, part_scale: Vector3, color: Color) -> MeshInstance3D:
+              _detail_box("RightShoe", Vector3(0.22, 0.12, 0.33), Vector3(0.17, 0.085, -0.07), Color(0.025, 0.03, 0.032))""",
+              "shoe details"
+          )
+          character_helpers = """func _detail_sphere(node_name: String, at: Vector3, part_scale: Vector3, color: Color) -> MeshInstance3D:
               var part := MeshInstance3D.new()
               part.name = node_name
               var mesh := SphereMesh.new()
@@ -442,21 +463,13 @@ jobs:
               return part
 
           """
-          p = p.replace(helper_marker, helpers + helper_marker, 1)
-          p = p.replace('material.albedo_color = Color(0.07, 0.12, 0.16)', 'material.albedo_color = Color(0.13, 0.19, 0.22)')
+          helper_marker = "func _make_limb(pos: Vector3, mat: Material, radius: float, height: float) -> MeshInstance3D:\n"
+          p = replace_once(p, helper_marker, character_helpers + helper_marker, "character helper functions")
           player_path.write_text(p, encoding="utf-8")
 
           game_path = Path(sys.argv[2])
           g = game_path.read_text(encoding="utf-8")
-
-          for name, declaration in [
-              ("var garage_hostiles_spawned := false", "var garage_hostiles_spawned := false\nvar road_grain_texture: Texture2D\nvar facade_grain_texture: Texture2D"),
-          ]:
-              if name not in g:
-                  raise SystemExit("Could not locate world material state.")
-              g = g.replace(name, declaration, 1)
-
-          env_marker = "func _create_environment() -> void:\n"
+          g = replace_once(g, "var garage_hostiles_spawned := false", "var garage_hostiles_spawned := false\nvar road_grain_texture: Texture2D\nvar facade_grain_texture: Texture2D", "world texture variables")
           texture_helper = """func _make_grain_texture(seed_value: int) -> Texture2D:
               var image := Image.create(96, 96, false, Image.FORMAT_RGBA8)
               var noise := FastNoiseLite.new()
@@ -472,87 +485,82 @@ jobs:
               return ImageTexture.create_from_image(image)
 
           """
-          if env_marker not in g:
-              raise SystemExit("Could not insert procedural texture helper.")
-          g = g.replace(env_marker, texture_helper + env_marker, 1)
+          g = replace_once(g, "func _create_environment() -> void:\n", texture_helper + "func _create_environment() -> void:\n", "grain texture helper")
+          g = replace_once(
+              g,
+              "    add_child(world)\n    # Compact, low-cost generated blockout aligned to the supplied Kochi GPS bounds.",
+              "    add_child(world)\n    road_grain_texture = _make_grain_texture(2741)\n    facade_grain_texture = _make_grain_texture(9049)\n    # Compact, low-cost generated blockout aligned to the supplied Kochi GPS bounds.",
+              "world texture initialisation"
+          )
+          g = insert_after_line(g, 'add_box(world, "RoadNS", Vector3(x, -0.015, 0)', [
+              'add_box(world, "RoadEdgeLine", Vector3(x - 6.45, 0.078, 0), Vector3(0.11, 0.025, 450), Color(0.62, 0.64, 0.60), false)',
+              'add_box(world, "RoadEdgeLine", Vector3(x + 6.45, 0.078, 0), Vector3(0.11, 0.025, 450), Color(0.62, 0.64, 0.60), false)',
+          ], "north-south road-edge markings", "func _create_world")
+          g = insert_after_line(g, 'add_box(world, "RoadEW", Vector3(0, -0.01, z)', [
+              'add_box(world, "RoadEdgeLine", Vector3(0, 0.078, z - 6.45), Vector3(520, 0.025, 0.11), Color(0.62, 0.64, 0.60), false)',
+              'add_box(world, "RoadEdgeLine", Vector3(0, 0.078, z + 6.45), Vector3(520, 0.025, 0.11), Color(0.62, 0.64, 0.60), false)',
+          ], "east-west road-edge markings", "func _create_world")
 
-          world_marker = "    add_child(world)\n    # Compact, low-cost generated blockout aligned to the supplied Kochi GPS bounds."
-          if world_marker not in g:
-              raise SystemExit("Could not locate world creation for texture setup.")
-          g = g.replace(world_marker,
-              "    add_child(world)\n    road_grain_texture = _make_grain_texture(2741)\n    facade_grain_texture = _make_grain_texture(9049)\n    # Compact, low-cost generated blockout aligned to the supplied Kochi GPS bounds.", 1)
+          crosswalk = """    # Painted crossing at the main junction to break up the flat road plane.
+              for stripe in range(6):
+                  add_box(world, "CrosswalkNS", Vector3(0, 0.09, -10.0 + float(stripe) * 1.25), Vector3(12.2, 0.025, 0.58), Color(0.76, 0.77, 0.72), false)
+                  add_box(world, "CrosswalkEW", Vector3(-10.0 + float(stripe) * 1.25, 0.09, 0), Vector3(0.58, 0.025, 12.2), Color(0.76, 0.77, 0.72), false)
+          """
+          g = replace_once(g, "    # Buildings placed in blocks;", crosswalk + "    # Buildings placed in blocks;", "junction crossing")
+          g = insert_after_line(g, 'add_box(world, "RoofParapet"', [
+              'if int(abs(x * 2 + z)) % 3 == 0:',
+              '    add_cylinder(world, "RooftopWaterTank", Vector3(bx + width * 0.22, height + 0.72, bz + 3.4), 0.42, 0.95, Color(0.18, 0.23, 0.25), false)',
+              '    add_box(world, "WaterTankBase", Vector3(bx + width * 0.22, height + 0.19, bz + 3.4), Vector3(1.0, 0.12, 1.0), Color(0.28, 0.29, 0.27), false)',
+          ], "rooftop tanks", "func _create_world")
+          g = insert_after_line(g, 'add_box(world, "DarkWindow"', [
+              'add_box(world, "WindowSill", Vector3(wx, wy - 0.51, bz - 8.63), Vector3(1.30, 0.08, 0.10), Color(0.27,0.29,0.28), false)',
+              'add_box(world, "WindowLintel", Vector3(wx, wy + 0.51, bz - 8.63), Vector3(1.30, 0.08, 0.10), Color(0.31,0.31,0.29), false)',
+              'add_box(world, "WindowFrame", Vector3(wx - 0.61, wy, bz - 8.63), Vector3(0.07, 1.05, 0.10), Color(0.25,0.28,0.28), false)',
+              'add_box(world, "WindowFrame", Vector3(wx + 0.61, wy, bz - 8.63), Vector3(0.07, 1.05, 0.10), Color(0.25,0.28,0.28), false)',
+          ], "window frames", "func _create_world")
 
-          # Add continuous road-edge markings and a simple intersection crossing.
-          road_marker = '''        add_box(world, "RoadNS", Vector3(x, -0.015, 0), Vector3(14, 0.16, 450), Color(0.075, 0.083, 0.09), false)
-              add_box(world, "FootpathNS_L",'''
-          if road_marker not in g:
-              raise SystemExit("Could not locate north-south road construction.")
-          g = g.replace(road_marker,
-              '''        add_box(world, "RoadNS", Vector3(x, -0.015, 0), Vector3(14, 0.16, 450), Color(0.075, 0.083, 0.09), false)
-                  add_box(world, "RoadEdgeLine", Vector3(x - 6.45, 0.078, 0), Vector3(0.11, 0.025, 450), Color(0.62, 0.64, 0.60), false)
-                  add_box(world, "RoadEdgeLine", Vector3(x + 6.45, 0.078, 0), Vector3(0.11, 0.025, 450), Color(0.62, 0.64, 0.60), false)
-                  add_box(world, "FootpathNS_L",''', 1)
-          road_marker = '''        add_box(world, "RoadEW", Vector3(0, -0.01, z), Vector3(520, 0.16, 14), Color(0.075, 0.083, 0.09), false)
-              add_box(world, "FootpathEW_N",'''
-          if road_marker not in g:
-              raise SystemExit("Could not locate east-west road construction.")
-          g = g.replace(road_marker,
-              '''        add_box(world, "RoadEW", Vector3(0, -0.01, z), Vector3(520, 0.16, 14), Color(0.075, 0.083, 0.09), false)
-                  add_box(world, "RoadEdgeLine", Vector3(0, 0.078, z - 6.45), Vector3(520, 0.025, 0.11), Color(0.62, 0.64, 0.60), false)
-                  add_box(world, "RoadEdgeLine", Vector3(0, 0.078, z + 6.45), Vector3(520, 0.025, 0.11), Color(0.62, 0.64, 0.60), false)
-                  add_box(world, "FootpathEW_N",''', 1)
-
-          # Fine-grain albedo keeps long asphalt and plaster planes from reading as solid-color blocks.
-          material_marker = '''    var material := StandardMaterial3D.new()
-              material.albedo_color = color
-              material.roughness = 0.86
-              material.metallic = 0.02
-              instance.material_override = material'''
-          if material_marker not in g:
-              raise SystemExit("Could not locate standard box material creation.")
-          g = g.replace(material_marker,
-              '''    var material := StandardMaterial3D.new()
-                  material.albedo_color = color
-                  material.roughness = 0.86
-                  material.metallic = 0.02
-                  if node_name == "RoadNS" or node_name == "RoadEW":
-                      material.albedo_texture = road_grain_texture
-                      material.uv1_triplanar = true
-                      material.uv1_scale = Vector3(2.0, 2.0, 2.0)
-                      material.roughness = 0.94
-                  elif node_name == "KochiBuilding":
-                      material.albedo_texture = facade_grain_texture
-                      material.uv1_triplanar = true
-                      material.uv1_scale = Vector3(1.4, 1.4, 1.4)
-                      material.roughness = 0.92
-                  instance.material_override = material''', 1)
-
-          # Rooftop water tanks and framed windows add Kerala streetscape detail.
-          roof_marker = '''                add_box(world, "RoofParapet", Vector3(bx, height + 0.12, bz), Vector3(width + 0.2, 0.24, 17.2), Color(0.24,0.26,0.25), false)
-                      for floor in range(maxi(1, int(height / 2.6))):'''
-          if roof_marker not in g:
-              raise SystemExit("Could not locate building roof construction.")
-          g = g.replace(roof_marker,
-              '''                add_box(world, "RoofParapet", Vector3(bx, height + 0.12, bz), Vector3(width + 0.2, 0.24, 17.2), Color(0.24,0.26,0.25), false)
-                      if int(abs(x * 2 + z)) % 3 == 0:
-                          add_cylinder(world, "RooftopWaterTank", Vector3(bx + width * 0.22, height + 0.72, bz + 3.4), 0.42, 0.95, Color(0.18, 0.23, 0.25), false)
-                          add_box(world, "WaterTankBase", Vector3(bx + width * 0.22, height + 0.19, bz + 3.4), Vector3(1.0, 0.12, 1.0), Color(0.28, 0.29, 0.27), false)
-                      for floor in range(maxi(1, int(height / 2.6))):''', 1)
-          window_marker = '''                        add_box(world, "DarkWindow", Vector3(wx, wy, bz - 8.58), Vector3(1.15, 0.92, 0.06), Color(0.06,0.11,0.14), false)
-              if int(abs(x * 2 + z)) % 3 == 0:'''
-          if window_marker not in g:
-              raise SystemExit("Could not locate front window placement.")
-          g = g.replace(window_marker,
-              '''                        add_box(world, "DarkWindow", Vector3(wx, wy, bz - 8.58), Vector3(1.15, 0.92, 0.06), Color(0.06,0.11,0.14), false)
-                          add_box(world, "WindowSill", Vector3(wx, wy - 0.51, bz - 8.63), Vector3(1.30, 0.08, 0.10), Color(0.27,0.29,0.28), false)
-                          add_box(world, "WindowLintel", Vector3(wx, wy + 0.51, bz - 8.63), Vector3(1.30, 0.08, 0.10), Color(0.31,0.31,0.29), false)
-                          add_box(world, "WindowFrame", Vector3(wx - 0.61, wy, bz - 8.63), Vector3(0.07, 1.05, 0.10), Color(0.25,0.28,0.28), false)
-                          add_box(world, "WindowFrame", Vector3(wx + 0.61, wy, bz - 8.63), Vector3(0.07, 1.05, 0.10), Color(0.25,0.28,0.28), false)
-              if int(abs(x * 2 + z)) % 3 == 0:'''
-             , 1)
-
+          lines = g.splitlines()
+          in_add_box = False
+          for i, line in enumerate(lines):
+              if line.startswith("func add_box("):
+                  in_add_box = True
+              elif in_add_box and line.startswith("func add_cylinder("):
+                  break
+              if in_add_box and "material.metallic = 0.02" in line:
+                  indent = line[:len(line) - len(line.lstrip())]
+                  additions = [
+                      'if node_name == "RoadNS" or node_name == "RoadEW":',
+                      "    material.albedo_texture = road_grain_texture",
+                      "    material.uv1_triplanar = true",
+                      "    material.uv1_scale = Vector3(2.0, 2.0, 2.0)",
+                      "    material.roughness = 0.94",
+                      'elif node_name == "KochiBuilding":',
+                      "    material.albedo_texture = facade_grain_texture",
+                      "    material.uv1_triplanar = true",
+                      "    material.uv1_scale = Vector3(1.4, 1.4, 1.4)",
+                      "    material.roughness = 0.92",
+                  ]
+                  lines[i + 1:i + 1] = [indent + item for item in additions]
+                  break
+          else:
+              raise SystemExit("Could not insert surface textures in add_box().")
+          g = "\n".join(lines) + "\n"
           game_path.write_text(g, encoding="utf-8")
-          print("Applied character silhouette, procedural surface grain, street edge lines, window trim and rooftop details.")
+
+          tools_dir = Path(sys.argv[3])
+          quality_test = '''from pathlib import Path
+
+          root = Path(__file__).resolve().parents[1]
+          game = (root / "scripts/game.gd").read_text(encoding="utf-8")
+          player = (root / "scripts/player_controller.gd").read_text(encoding="utf-8")
+          assert "road_grain_texture" in game and "uv1_triplanar = true" in game
+          assert "RoadEdgeLine" in game and "CrosswalkNS" in game
+          assert "RooftopWaterTank" in game and "WindowSill" in game
+          assert '_detail_sphere("Hair"' in player and '_detail_box("LeftShoe"' in player
+          print("Visual source checks passed: road/facade grain, road markings, rooftop/window detail and readable player silhouette.")
+          '''
+          (tools_dir / "test_visual_quality.py").write_text(quality_test, encoding="utf-8")
+          print("Applied player silhouette, procedural road/facade grain, road-edge lines, crossing, window trims and rooftop tanks.")
           PY
 
       - name: Run static and drivetrain checks
@@ -562,6 +570,7 @@ jobs:
           python3 tools/validate_source.py
           python3 tools/test_drivetrain.py
           python3 tools/test_touch_controls.py
+          python3 tools/test_visual_quality.py
 
       - name: Set up Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
