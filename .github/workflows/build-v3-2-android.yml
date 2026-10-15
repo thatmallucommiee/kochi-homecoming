@@ -27,6 +27,33 @@ jobs:
           python3 "$GITHUB_WORKSPACE/build-patches/fix-game-parse.py" "$GITHUB_WORKSPACE/source/scripts/game.gd"
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/source" >> "$GITHUB_ENV"
 
+      - name: Apply Godot 4.7 strict typing fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/scripts/player_controller.gd" "$PROJECT_DIR/scripts/mission_manager.gd" <<'PY'
+          from pathlib import Path
+          import sys
+          player = Path(sys.argv[1])
+          text = player.read_text()
+          fixes = {
+              "var vehicle_heading := active_vehicle.rotation.y if active_vehicle != null and is_instance_valid(active_vehicle) else 0.0": "var vehicle_heading: float = active_vehicle.rotation.y if active_vehicle != null and is_instance_valid(active_vehicle) else 0.0",
+              "var car := active_vehicle": "var car: Variant = active_vehicle",
+              "var side := car.global_basis.x": "var side: Vector3 = car.global_basis.x",
+              "var world_camera_yaw := car.rotation.y + camera_yaw": "var world_camera_yaw: float = car.rotation.y + camera_yaw",
+          }
+          for old, new in fixes.items():
+              if old in text:
+                  text = text.replace(old, new)
+          player.write_text(text)
+          missions = Path(sys.argv[2])
+          text = missions.read_text()
+          old = 'var start_pos := game.gps_to_world(float(data.get("lat", 9.96)), float(data.get("lon", 76.25)))'
+          new = 'var start_pos: Vector3 = game.gps_to_world(float(data.get("lat", 9.96)), float(data.get("lon", 76.25)))'
+          missions.write_text(text.replace(old, new))
+          print("Applied explicit types for Godot 4.7 strict inference.")
+          PY
+
       - name: Run static and drivetrain checks
         shell: bash
         run: |
