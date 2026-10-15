@@ -66,12 +66,205 @@ jobs:
           p.write_text(s)
           PY
 
+      - name: Fix mobile movement and vehicle controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/scripts/hud.gd" "$PROJECT_DIR/tools/validate_source.py" <<'PY'
+          from pathlib import Path
+          import sys
+
+          hud_path = Path(sys.argv[1])
+          s = hud_path.read_text(encoding="utf-8")
+
+          def replace_once(old: str, new: str, reason: str) -> None:
+              global s
+              if old not in s:
+                  raise SystemExit("Could not apply mobile-control fix: " + reason)
+              s = s.replace(old, new, 1)
+
+          replace_once(
+              "var joystick_active := false\nvar toast_clock := 0.0",
+              "var joystick_active := false\nvar joystick_touch_index := -1\nvar vehicle_steer_left_held := false\nvar vehicle_steer_right_held := false\nvar toast_clock := 0.0",
+              "control-state declarations"
+          )
+          replace_once(
+              "pad.gui_input.connect(_on_joystick.bind(joystick_control))",
+              "pad.gui_input.connect(_on_joystick.bind(pad))",
+              "joystick pad binding"
+          )
+          replace_once(
+              'var left := _button("◀", Vector2(-310, -84), Vector2(46, 52))',
+              'var left := _left_bottom_button("◀ LEFT", 26, -132, Vector2(94, 62))',
+              "left steering-button position"
+          )
+          replace_once(
+              'var right := _button("▶", Vector2(-258, -84), Vector2(46, 52))',
+              'var right := _left_bottom_button("RIGHT ▶", 130, -132, Vector2(104, 62))',
+              "right steering-button position"
+          )
+          replace_once(
+              '''    left.button_down.connect(func():
+                  if player != null:
+                      player.touch_steer = -1.0
+              )
+              left.button_up.connect(func():
+                  if player != null and player.touch_steer < 0.0:
+                      player.touch_steer = 0.0
+              )''',
+              '''    left.button_down.connect(func():
+                  vehicle_steer_left_held = true
+                  _sync_vehicle_steering()
+              )
+              left.button_up.connect(func():
+                  vehicle_steer_left_held = false
+                  _sync_vehicle_steering()
+              )''',
+              "left steering input"
+          )
+          replace_once(
+              '''    right.button_down.connect(func():
+                  if player != null:
+                      player.touch_steer = 1.0
+              )
+              right.button_up.connect(func():
+                  if player != null and player.touch_steer > 0.0:
+                      player.touch_steer = 0.0
+              )''',
+              '''    right.button_down.connect(func():
+                  vehicle_steer_right_held = true
+                  _sync_vehicle_steering()
+              )
+              right.button_up.connect(func():
+                  vehicle_steer_right_held = false
+                  _sync_vehicle_steering()
+              )''',
+              "right steering input"
+          )
+          replace_once(
+              "func _button(label: String, offsets: Vector2, button_size: Vector2) -> Button:\n",
+              '''func _sync_vehicle_steering() -> void:
+              if player != null:
+                  player.touch_steer = (1.0 if vehicle_steer_right_held else 0.0) - (1.0 if vehicle_steer_left_held else 0.0)
+
+          func _left_bottom_button(label: String, x: float, top_offset: float, button_size: Vector2) -> Button:
+              var b := Button.new()
+              b.text = label
+              b.anchor_left = 0
+              b.anchor_right = 0
+              b.anchor_top = 1
+              b.anchor_bottom = 1
+              b.offset_left = x
+              b.offset_top = top_offset
+              b.offset_right = x + button_size.x
+              b.offset_bottom = top_offset + button_size.y
+              b.custom_minimum_size = button_size
+              b.add_theme_font_size_override("font_size", 13)
+              root.add_child(b)
+              return b
+
+          func _button(label: String, offsets: Vector2, button_size: Vector2) -> Button:
+          ''',
+              "left-anchored steering-button helper"
+          )
+          replace_once(
+              "    var center := joystick.global_position + Vector2(78, 78)",
+              "    var center := Vector2(78, 78)",
+              "joystick local-space centre"
+          )
+          replace_once(
+              '''func _apply_joystick(pos: Vector2) -> void:
+              var d := (pos - Vector2(78, 78)).limit_length(52.0)
+              joystick_knob.position = Vector2(51, 51) + d
+              if player != null:
+                  player.touch_move = Vector2(d.x / 52.0, d.y / 52.0)''',
+              '''func _apply_joystick(pos: Vector2) -> void:
+              var d := (pos - Vector2(78, 78)).limit_length(52.0)
+              joystick_knob.position = Vector2(51, 51) + d
+              if player != null:
+                  # Up is negative screen Y; this maps to forward in _walk().
+                  # Keep both axes so the stick supports reverse and lateral motion too.
+                  player.touch_move = Vector2(d.x / 52.0, d.y / 52.0)''',
+              "joystick two-axis mapping"
+          )
+          replace_once(
+              '''func refresh_context() -> void:
+              player = game.player if game != null else null
+              var in_car := player != null and player.active_vehicle != null
+              for control in onfoot_controls:''',
+              '''func refresh_context() -> void:
+              player = game.player if game != null else null
+              var in_car := player != null and player.active_vehicle != null
+              # Clear stale touches when the HUD switches between walking and driving.
+              joystick_active = false
+              joystick_touch_index = -1
+              vehicle_steer_left_held = false
+              vehicle_steer_right_held = false
+              if player != null:
+                  player.touch_move = Vector2.ZERO
+                  player.touch_steer = 0.0
+                  player.touch_throttle = 0.0
+                  player.touch_brake = 0.0
+                  player.touch_handbrake = false
+              if joystick_knob != null:
+                  joystick_knob.position = Vector2(51, 51)
+              for control in onfoot_controls:''',
+              "context-switch touch reset"
+          )
+          hud_path.write_text(s, encoding="utf-8")
+
+          # Make the existing source validation protect these input regressions.
+          check_path = Path(sys.argv[2])
+          checks = check_path.read_text(encoding="utf-8")
+          marker = 'assert (root / "export_presets.cfg").is_file(), "Android export preset missing"\n'
+          additions = (
+              marker
+              + 'hud = (root / "scripts/hud.gd").read_text(encoding="utf-8")\n'
+              + 'assert "pad.gui_input.connect(_on_joystick.bind(pad))" in hud, "joystick must use pad-local coordinates"\n'
+              + 'assert "pos - Vector2(78, 78)" in hud, "joystick must map both axes from its local centre"\n'
+              + 'assert "_left_bottom_button(\\"◀ LEFT\\"" in hud and "_left_bottom_button(\\"RIGHT ▶\\"" in hud, "vehicle steering buttons missing"\n'
+              + 'assert "_sync_vehicle_steering()" in hud, "vehicle steering input handler missing"\n'
+          )
+          if 'joystick must use pad-local coordinates' not in checks:
+              if marker not in checks:
+                  raise SystemExit("Could not add touch-control regression assertions.")
+              checks = checks.replace(marker, additions, 1)
+              check_path.write_text(checks, encoding="utf-8")
+
+          # A compact independent test verifies cardinal directions and steering regressions.
+          (check_path.parent / "test_touch_controls.py").write_text('''from pathlib import Path
+          import math
+
+          root = Path(__file__).resolve().parents[1]
+          hud = (root / "scripts/hud.gd").read_text(encoding="utf-8")
+
+          def axis(x, y):
+              dx, dy = x - 78.0, y - 78.0
+              length = math.hypot(dx, dy)
+              if length > 52.0:
+                  dx, dy = dx * 52.0 / length, dy * 52.0 / length
+              return dx / 52.0, dy / 52.0
+
+          assert axis(78, 26) == (0.0, -1.0), "up must move forward"
+          assert axis(78, 130) == (0.0, 1.0), "down must move backward"
+          assert axis(26, 78) == (-1.0, 0.0), "left must remain left"
+          assert axis(130, 78) == (1.0, 0.0), "right must remain right"
+          assert "pos - Vector2(78, 78)" in hud
+          assert "_left_bottom_button(\\"◀ LEFT\\"" in hud
+          assert "_left_bottom_button(\\"RIGHT ▶\\"" in hud
+          assert "vehicle_steer_left_held = true" in hud and "vehicle_steer_right_held = true" in hud
+          print("Touch-control regression passed: joystick four-way movement and dedicated left/right vehicle steering.")
+          ''', encoding="utf-8")
+          print("Applied mobile-control fixes: local-space joystick, dedicated left-side steering controls, and touch-state reset.")
+          PY
+
       - name: Run static and drivetrain checks
         shell: bash
         run: |
           cd "$PROJECT_DIR"
           python3 tools/validate_source.py
           python3 tools/test_drivetrain.py
+          python3 tools/test_touch_controls.py
 
       - name: Set up Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
