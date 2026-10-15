@@ -59,17 +59,20 @@ jobs:
           from pathlib import Path
           import re, sys
           p = Path(sys.argv[1])
-          s = p.read_text()
-          fixes = [
-              (r'(?m)^([ \\t]*)var bx :=', r'\\1var bx: float ='),
-              (r'(?m)^([ \\t]*)var wx :=', r'\\1var wx: float ='),
-              (r'(?m)^([ \\t]*)var d :=', r'\\1var d: float ='),
-              (r'(?m)^([ \\t]*)var spawn_pos :=', r'\\1var spawn_pos: Vector3 ='),
-          ]
-          for pattern, replacement in fixes:
-              s, n = re.subn(pattern, replacement, s)
-              print(f"{pattern}: fixed {n}")
-          p.write_text(s)
+          lines = p.read_text().splitlines()
+          rules = {
+              "bx": "float",
+              "wx": "float",
+              "d": "float",
+              "spawn_pos": "Vector3",
+          }
+          for i, line in enumerate(lines):
+              m = re.match(r'^(\\s*)var (bx|wx|d|spawn_pos) :=', line)
+              if m:
+                  indent, name = m.groups()
+                  lines[i] = re.sub(r'^\\s*var ' + name + r' :=', indent + "var " + name + ": " + rules[name] + " =", line)
+                  print(f"typed {name} on line {i+1}")
+          p.write_text("\\n".join(lines) + "\\n")
           PY
 
       - name: Run static and drivetrain checks
