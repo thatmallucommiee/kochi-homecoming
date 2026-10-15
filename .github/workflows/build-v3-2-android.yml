@@ -3,8 +3,6 @@ name: Build Kochi Homecoming v3.2 Android APK
 on:
   push:
     branches: [build-v3-2-android]
-    paths:
-      - 'build-results/rebuild-trigger.txt'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +22,6 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/source"
           cat kochi-source-v3.2.tar.xz.b64.part* | base64 --decode | tar -xJ -C "$GITHUB_WORKSPACE/source"
           test -f "$GITHUB_WORKSPACE/source/project.godot"
-          python3 "$GITHUB_WORKSPACE/build-patches/fix-game-parse.py" "$GITHUB_WORKSPACE/source/scripts/game.gd"
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/source" >> "$GITHUB_ENV"
 
       - name: Apply Godot 4.7 strict typing fixes
@@ -43,15 +40,15 @@ jobs:
               "var world_camera_yaw := car.rotation.y + camera_yaw": "var world_camera_yaw: float = car.rotation.y + camera_yaw",
           }
           for old, new in fixes.items():
-              if old in text:
-                  text = text.replace(old, new)
+              text = text.replace(old, new)
           player.write_text(text)
           missions = Path(sys.argv[2])
           text = missions.read_text()
-          old = 'var start_pos := game.gps_to_world(float(data.get("lat", 9.96)), float(data.get("lon", 76.25)))'
-          new = 'var start_pos: Vector3 = game.gps_to_world(float(data.get("lat", 9.96)), float(data.get("lon", 76.25)))'
-          missions.write_text(text.replace(old, new))
-          print("Applied explicit types for Godot 4.7 strict inference.")
+          text = text.replace(
+              'var start_pos := game.gps_to_world(float(data.get("lat", 9.96)), float(data.get("lon", 76.25)))',
+              'var start_pos: Vector3 = game.gps_to_world(float(data.get("lat", 9.96)), float(data.get("lon", 76.25)))'
+          )
+          missions.write_text(text)
           PY
 
       - name: Run static and drivetrain checks
@@ -81,7 +78,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable"
-          curl -L --fail --retry 3             "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz"             -o /tmp/godot-templates.tpz
+          curl -L --fail --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz" \
+            -o /tmp/godot-templates.tpz
           mkdir -p /tmp/godot-templates
           unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
@@ -92,7 +91,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          keytool -genkeypair -v             -keystore "$HOME/debug.keystore"             -storepass android -alias androiddebugkey -keypass android             -keyalg RSA -keysize 2048 -validity 10000             -dname "CN=Android Debug,O=Android,C=US"
+          keytool -genkeypair -v \
+            -keystore "$HOME/debug.keystore" \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
           {
             echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/debug.keystore"
             echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey"
@@ -112,83 +115,26 @@ jobs:
           set -euo pipefail
           python3 - "$PROJECT_DIR/project.godot" "$PROJECT_DIR/export_presets.cfg" <<'PY'
           from pathlib import Path
-          import sys
+          import re, sys
           project = Path(sys.argv[1])
           text = project.read_text()
-          if "rendering/textures/vram_compression/import_etc2_astc=" not in text:
-              text += '\n[rendering]\ntextures/vram_compression/import_etc2_astc=true\n'
+          key = "textures/vram_compression/import_etc2_astc="
+          if re.search(r'(?m)^textures/vram_compression/import_etc2_astc=', text):
+              text = re.sub(r'(?m)^textures/vram_compression/import_etc2_astc=.*$', key + "true", text)
           else:
-              import re
-              text = re.sub(r'(?m)^textures/vram_compression/import_etc2_astc=.*        shell: bash
-        run: godot --headless --editor --path "$PROJECT_DIR" --quit
-
-      - name: Smoke-test game startup
-        shell: bash
-        run: |
-          set -o pipefail
-          timeout 120s godot --headless --path "$PROJECT_DIR" --quit-after 4 2>&1 | tee "$RUNNER_TEMP/kochihomecoming-smoke.log"
-          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script|Could not load script" "$RUNNER_TEMP/kochihomecoming-smoke.log"; then
-            echo "Godot reported a script or scene startup error." >&2
-            exit 1
-          fi
-
-      - name: Export Android debug APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$GITHUB_WORKSPACE/out"
-          godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$GITHUB_WORKSPACE/out/Kochi-Homecoming-v0.3.2-debug.apk"
-          test -s "$GITHUB_WORKSPACE/out/Kochi-Homecoming-v0.3.2-debug.apk"
-          unzip -t "$GITHUB_WORKSPACE/out/Kochi-Homecoming-v0.3.2-debug.apk"
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Kochi-Homecoming-v0.3.2-debug-apk
-          path: out/Kochi-Homecoming-v0.3.2-debug.apk
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Publish downloadable prerelease
-        if: success()
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: kochi-homecoming-v0.3.2-build-${{ github.run_number }}
-          name: "Kochi: Homecoming v0.3.2 Android debug build"
-          prerelease: true
-          generate_release_notes: true
-          files: out/Kochi-Homecoming-v0.3.2-debug.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Record build outcome
-        if: always()
-        shell: bash
-        env:
-          BUILD_STATUS: ${{ job.status }}
-        run: |
-          set +e
-          mkdir -p build-results
-          {
-            echo "workflow_run_id=$GITHUB_RUN_ID"
-            echo "workflow_run_number=$GITHUB_RUN_NUMBER"
-            echo "status=$BUILD_STATUS"
-            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo "apk_release_tag=kochi-homecoming-v0.3.2-build-$GITHUB_RUN_NUMBER"
-          } > build-results/latest.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add build-results/latest.txt
-          git commit -m "Record v3.2 Android build result" || exit 0
-          git pull --rebase origin "$GITHUB_REF_NAME" || exit 0
-          git push origin "HEAD:$GITHUB_REF_NAME"
-, 'textures/vram_compression/import_etc2_astc=true', text)
+              match = re.search(r'(?m)^\\[rendering\\]\\s*$', text)
+              if not match:
+                  raise SystemExit("Missing [rendering] section in project.godot")
+              insert_at = match.end()
+              text = text[:insert_at] + "\\n" + key + "true" + text[insert_at:]
           project.write_text(text)
           preset = Path(sys.argv[2])
-          text = preset.read_text()
-          text = text.replace('gradle_build/compress_native_libraries=true', 'gradle_build/compress_native_libraries=false')
+          text = preset.read_text().replace(
+              "gradle_build/compress_native_libraries=true",
+              "gradle_build/compress_native_libraries=false"
+          )
           preset.write_text(text)
-          print("Android export settings repaired: ETC2/ASTC enabled; Gradle-only compression disabled.")
+          print("Fixed Android export settings: ETC2/ASTC import enabled; Gradle-only compression disabled.")
           PY
 
       - name: Import and validate Godot project
@@ -233,24 +179,3 @@ jobs:
           files: out/Kochi-Homecoming-v0.3.2-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Record build outcome
-        if: always()
-        shell: bash
-        env:
-          BUILD_STATUS: ${{ job.status }}
-        run: |
-          set +e
-          mkdir -p build-results
-          {
-            echo "workflow_run_id=$GITHUB_RUN_ID"
-            echo "workflow_run_number=$GITHUB_RUN_NUMBER"
-            echo "status=$BUILD_STATUS"
-            echo "run_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo "apk_release_tag=kochi-homecoming-v0.3.2-build-$GITHUB_RUN_NUMBER"
-          } > build-results/latest.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add build-results/latest.txt
-          git commit -m "Record v3.2 Android build result" || exit 0
-          git push origin "HEAD:$GITHUB_REF_NAME"
