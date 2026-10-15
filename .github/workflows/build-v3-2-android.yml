@@ -133,19 +133,21 @@ jobs:
           import re, sys
           project = Path(sys.argv[1])
           text = project.read_text()
-          key = "textures/vram_compression/import_etc2_astc=true"
-          if "[rendering]" in text:
-              text = text.replace("[rendering]", "[rendering]\\n" + key, 1)
-          else:
-              text += "\\n[rendering]\\n" + key + "\\n"
+          key = "textures/vram_compression/import_etc2_astc"
+          # Remove prior malformed attempts and any duplicate setting.
+          text = re.sub(r'(?m)^textures/vram_compression/import_etc2_astc=.*(?:\\n)?\\s*', '', text)
+          text = re.sub(r'(?m)^\\[rendering\\][ \\t]*$', '[rendering]', text)
+          if "[rendering]" not in text:
+              text += "\\n[rendering]"
+          text = text.replace("[rendering]", "[rendering]" + chr(10) + key + "=true", 1)
           project.write_text(text)
+          # Fail immediately unless Godot's INI file has a real standalone setting.
+          check = project.read_text()
+          assert re.search(r'(?m)^\\[rendering\\]$.*?^textures/vram_compression/import_etc2_astc=true$', check, re.S), "ETC2 setting not written as valid project setting"
           preset = Path(sys.argv[2])
-          text = preset.read_text().replace(
-              "gradle_build/compress_native_libraries=true",
-              "gradle_build/compress_native_libraries=false"
-          )
-          preset.write_text(text)
-          print("Fixed Android export settings: ETC2/ASTC import enabled; Gradle-only compression disabled.")
+          data = preset.read_text().replace("gradle_build/compress_native_libraries=true", "gradle_build/compress_native_libraries=false")
+          preset.write_text(data)
+          print("Validated real ETC2/ASTC setting in project.godot.")
           PY
 
       - name: Import and validate Godot project
