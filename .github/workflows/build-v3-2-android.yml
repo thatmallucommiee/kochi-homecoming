@@ -57,22 +57,13 @@ jobs:
           set -euo pipefail
           python3 - "$PROJECT_DIR/scripts/game.gd" <<'PY'
           from pathlib import Path
-          import re, sys
+          import sys
           p = Path(sys.argv[1])
-          lines = p.read_text().splitlines()
-          rules = {
-              "bx": "float",
-              "wx": "float",
-              "d": "float",
-              "spawn_pos": "Vector3",
-          }
-          for i, line in enumerate(lines):
-              m = re.match(r'^(\\s*)var (bx|wx|d|spawn_pos) :=', line)
-              if m:
-                  indent, name = m.groups()
-                  lines[i] = re.sub(r'^\\s*var ' + name + r' :=', indent + "var " + name + ": " + rules[name] + " =", line)
-                  print(f"typed {name} on line {i+1}")
-          p.write_text("\\n".join(lines) + "\\n")
+          s = p.read_text()
+          s = s.replace(chr(92) + "n", chr(10))
+          for name, typ in [("bx", "float"), ("wx", "float"), ("d", "float"), ("spawn_pos", "Vector3")]:
+              s = s.replace("var " + name + " :=", "var " + name + ": " + typ + " =")
+          p.write_text(s)
           PY
 
       - name: Run static and drivetrain checks
