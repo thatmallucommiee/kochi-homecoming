@@ -118,15 +118,11 @@ jobs:
           import re, sys
           project = Path(sys.argv[1])
           text = project.read_text()
-          key = "textures/vram_compression/import_etc2_astc="
-          if re.search(r'(?m)^textures/vram_compression/import_etc2_astc=', text):
-              text = re.sub(r'(?m)^textures/vram_compression/import_etc2_astc=.*$', key + "true", text)
+          key = "textures/vram_compression/import_etc2_astc=true"
+          if "[rendering]" in text:
+              text = text.replace("[rendering]", "[rendering]\\n" + key, 1)
           else:
-              match = re.search(r'(?m)^\\[rendering\\]\\s*$', text)
-              if not match:
-                  raise SystemExit("Missing [rendering] section in project.godot")
-              insert_at = match.end()
-              text = text[:insert_at] + "\\n" + key + "true" + text[insert_at:]
+              text += "\\n[rendering]\\n" + key + "\\n"
           project.write_text(text)
           preset = Path(sys.argv[2])
           text = preset.read_text().replace(
