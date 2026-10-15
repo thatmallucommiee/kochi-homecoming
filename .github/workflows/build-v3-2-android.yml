@@ -173,11 +173,6 @@ jobs:
               "joystick local-space centre"
           )
           replace_once(
-              "    var center := joystick.global_position + Vector2(78, 78)",
-              "    var center := Vector2(78, 78)",
-              "joystick local-space centre"
-          )
-          replace_once(
               '''    if player != null:
                   player.touch_move = Vector2(d.x / 52.0, d.y / 52.0)''',
               '''    if player != null:
