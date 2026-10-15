@@ -173,47 +173,15 @@ jobs:
               "joystick local-space centre"
           )
           replace_once(
-              '''func _on_joystick(event: InputEvent, joystick: Control) -> void:
-              var center := joystick.global_position + Vector2(78, 78)
-              if event is InputEventScreenTouch:
-                  joystick_active = event.pressed
-                  if joystick_active:
-                      _apply_joystick(event.position, center)
-                  else:
-                      if player != null:
-                          player.touch_move = Vector2.ZERO
-                      joystick_knob.position = Vector2(51, 51)
-              elif event is InputEventScreenDrag and joystick_active:
-                  _apply_joystick(event.position, center)''',
-              '''func _on_joystick(event: InputEvent, pad: Control) -> void:
-              # gui_input gives the event in the receiving pad's local coordinates.
-              var center := Vector2(78, 78)
-              if event is InputEventScreenTouch:
-                  if event.pressed and not joystick_active:
-                      joystick_active = true
-                      joystick_touch_index = event.index
-                      _apply_joystick(event.position, center)
-                  elif not event.pressed and event.index == joystick_touch_index:
-                      joystick_active = false
-                      joystick_touch_index = -1
-                      if player != null:
-                          player.touch_move = Vector2.ZERO
-                      joystick_knob.position = Vector2(51, 51)
-              elif event is InputEventScreenDrag and joystick_active and event.index == joystick_touch_index:
-                  _apply_joystick(event.position, center)''',
-              "joystick local coordinate and touch ownership"
+              "    var center := joystick.global_position + Vector2(78, 78)",
+              "    var center := Vector2(78, 78)",
+              "joystick local-space centre"
           )
           replace_once(
-              '''func _apply_joystick(pos: Vector2, center: Vector2) -> void:
-              var d := (pos - center).limit_length(52.0)
-              joystick_knob.position = Vector2(51, 51) + d
-              if player != null:
+              '''    if player != null:
                   player.touch_move = Vector2(d.x / 52.0, d.y / 52.0)''',
-              '''func _apply_joystick(pos: Vector2, center: Vector2) -> void:
-              var d := (pos - center).limit_length(52.0)
-              joystick_knob.position = Vector2(51, 51) + d
-              if player != null:
-                  # Up is negative screen Y; both axes are passed to player movement.
+              '''    if player != null:
+                  # Pass both axes through: up/down and left/right are all supported.
                   player.touch_move = Vector2(d.x / 52.0, d.y / 52.0)''',
               "joystick two-axis mapping"
           )
