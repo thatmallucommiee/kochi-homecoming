@@ -458,6 +458,8 @@ namespace KochiHomecoming.Editor
                 new Vector3(0.25f, 0.12f, 0.35f), playerClothes);
 
             root.AddComponent<ThirdPersonMotor>();
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+                child.gameObject.isStatic = false;
             return root;
         }
 
@@ -515,6 +517,8 @@ namespace KochiHomecoming.Editor
 
             VehicleDriveController controller = car.AddComponent<VehicleDriveController>();
             controller.SetExitPoint(exit.transform);
+            foreach (Transform child in car.GetComponentsInChildren<Transform>(true))
+                child.gameObject.isStatic = false;
             return controller;
         }
 
@@ -604,8 +608,6 @@ namespace KochiHomecoming.Editor
             }
             return obj;
         }
-
-        private static void CreatePalmPlaceholder() { }
 
         private static void ApplyMaterial(GameObject obj, Material material)
         {
