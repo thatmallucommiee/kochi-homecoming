@@ -718,6 +718,7 @@ jobs:
           python3 tools/test_drivetrain.py
           python3 tools/test_touch_controls.py
           python3 tools/test_visual_quality.py
+          python3 tools/test_kochi_landmarks.py
 
       - name: Set up Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
