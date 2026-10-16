@@ -1,0 +1,64 @@
+name: Kochi Homecoming - Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - unity-rebuild
+    paths:
+      - "UnityProject/**"
+      - ".github/workflows/unity-android-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout separate Unity project
+        uses: actions/checkout@v4
+        with:
+          ref: unity-rebuild
+          lfs: true
+
+      - name: Verify Unity license secret is configured
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if [ -z "$UNITY_LICENSE" ]; then
+            echo "::error::Unity build not started: repository secret UNITY_LICENSE is not configured."
+            echo "Create a Unity Personal license .ulf and add its contents as the GitHub Actions secret UNITY_LICENSE."
+            exit 1
+          fi
+
+      - name: Cache Unity import data
+        uses: actions/cache@v4
+        with:
+          path: UnityProject/Library
+          key: UnityLibrary-6000.3.26f1-Android-${{ hashFiles('UnityProject/Assets/**', 'UnityProject/Packages/**', 'UnityProject/ProjectSettings/**') }}
+          restore-keys: |
+            UnityLibrary-6000.3.26f1-Android-
+
+      - name: Build APK with Unity 6.3 LTS
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: UnityProject
+          unityVersion: 6000.3.26f1
+          targetPlatform: Android
+          androidExportType: androidPackage
+          buildMethod: KochiHomecoming.Editor.UnityAndroidBuild.Build
+          allowDirtyBuild: true
+          buildsPath: UnityProject/Builds
+          buildName: KochiHomecoming
+
+      - name: Publish APK as a downloadable workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kochi-Homecoming-Android-APK
+          path: UnityProject/Build/KochiHomecoming.apk
+          if-no-files-found: error
+          retention-days: 14
