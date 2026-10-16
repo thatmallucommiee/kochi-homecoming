@@ -46,6 +46,7 @@ private:
                      const FLinearColor& Color, bool bCollision = false);
     void AddSphere(FName Style, const FVector& Location, const FVector& DimensionsCm,
                    const FLinearColor& Color, bool bCollision = false);
+    void BuildLighting();
     void BuildGroundAndRoads();
     void BuildBuildings();
     void BuildStreetLife();
