@@ -18,3 +18,6 @@ Level-design reference: https://www.gamedeveloper.com/design/gdc-2018-level-desi
 ## Android branding
 
 Use the supplied KOCHI HOMECOMING artwork for the app icon, including Android's legacy icon and adaptive icon layers. Godot Android export reference: https://docs.godotengine.org/en/latest/tutorials/export/exporting_for_android.html
+
+
+CI note: launcher-icon generation installs ImageMagick when the runner image does not already provide it, so icon preparation is reproducible across runners.
