@@ -1,30 +1,45 @@
-# Kochi: Homecoming — Unity Rebuild
+# Kochi: Homecoming — Separate Unity Project
 
-This directory is a separate Unity implementation. It does not replace or modify the existing Godot prototype.
+This is the new Unity implementation on the `unity-rebuild` branch. It does **not** replace or modify the existing Godot prototype.
 
-## Target
-- Unity 6 LTS-compatible project structure; confirm exact installed editor version before opening.
-- Android first, landscape orientation, touch controls, optimized for mid-range devices such as Poco X7 5G.
-- Cinematic third-person open-world crime game set in a fictionalized Kochi.
+## Project target
 
-## Canon guardrails
-- Vivek, 25, returns to Kochi in 2026 after his father Abraham's death.
+- **Editor:** Unity 6.3 LTS, pinned to `6000.3.26f1`.
+- **Platform:** Android first, landscape orientation, ARM64 APK.
+- **Package ID:** `com.aswinmohan.kochihomecoming`.
+- **Touch controls:** left movement joystick, right-side camera drag, run, interact and vehicle buttons.
+- **Build method:** `KochiHomecoming.Editor.UnityAndroidBuild.Build`.
+
+## Current opening vertical slice
+
+The project can generate an opening Kochi-inspired street scene from `Assets/Editor/HomecomingSceneSetup.cs`. It includes a third-person player controller, follow/orbit camera, mobile HUD, initial return-home objective, interactable gate, a parked vehicle with enter/exit and basic driving, roads, shopfronts, vegetation and street furniture.
+
+**Asset status:** this is a *procedural prototype scene*, with hand-built primitive meshes and generated materials. It is not yet the intended realistic final art pass, does not contain production character animations or licensed high-detail city/vehicle assets, and has not been performance-tested on a phone. The gameplay systems and art should be developed and verified in stages rather than labelling the prototype GTA-quality.
+
+## Story guardrails
+
+- Vivek, 25, returns to Kochi in 2026 after the death of his father Abraham.
 - Abraham's death appears to be a road accident; a deliberately cut brake line is suspected, not confirmed.
 - Rafi, 32, is a mechanic and fixer who knows part of Abraham's criminal world.
 - Do not reveal the central mystery early, invent a confirmed conspiracy, or give Vivek a weapon/wanted level at the opening.
-- Preserve established story facts; do not invent missions or plot twists without direction.
+- Preserve the already established story. The demo's tutorial objective is scaffolding, not a new canon plot reveal.
 
-## First vertical slice (in order)
-1. Third-person character, camera-relative movement, correct collision, camera orbit.
-2. Touch joystick and camera drag; controls must not overlap.
-3. One detailed, small Kochi-inspired street block with real authored/ sourced assets—not primitive-block city dressing.
-4. One parked vehicle with enter/exit and functional driving.
-5. One interaction and dialogue trigger.
-6. First story beat and save/checkpoint.
-7. Android profiling and APK build/test on device.
+## Generate the scene in Unity
 
-## Asset honesty
-No GTA V assets, ripped models, or copyrighted Rockstar content. Use properly licensed assets and original assets. Do not claim a feature, APK, performance target, or device test is complete until actually built and verified.
+Open `UnityProject` with **Unity 6.3 LTS (6000.3.26f1)** and Android Build Support installed. From the Unity menu, choose **Kochi Homecoming → Generate Opening Street**. This creates `Assets/Scenes/Homecoming.unity` and the generated materials, then configures the scene for Android.
 
-## Open in Unity
-Create/open a Unity project at this folder using the installed Unity Editor, then set Android Build Support, Android SDK/NDK tools, and OpenJDK through Unity Hub. The repository currently contains source scaffolding, not a compiled APK or complete Unity-generated project metadata.
+## Export an APK
+
+The project contains an Editor build method at `Assets/Editor/UnityAndroidBuild.cs`. It can be invoked using Unity batch mode:
+
+```text
+Unity -batchmode -quit -projectPath <path-to-UnityProject> -executeMethod KochiHomecoming.Editor.UnityAndroidBuild.Build -logFile -
+```
+
+Install Android Build Support, SDK, NDK and OpenJDK through Unity Hub before building locally.
+
+The GitHub Actions workflow `.github/workflows/unity-android-apk.yml` is configured to build an APK and upload it as a downloadable workflow artifact. GitHub must have the Unity Personal license file available as the repository Actions secret `UNITY_LICENSE`; without that secret the build stops at its preflight check. The build artifact is not available until a successful workflow run completes.
+
+## Current verification status
+
+Source scaffolding and a procedural scene/build pipeline are committed, but the Unity Editor and Android SDK/NDK are not installed in the assistant's execution environment. Therefore, no APK has been compiled, installed, or device-tested here yet. Do not treat a successful source commit as proof of a working build.
