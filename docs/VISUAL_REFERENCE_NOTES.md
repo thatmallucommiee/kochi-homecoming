@@ -21,3 +21,12 @@ Use the supplied KOCHI HOMECOMING artwork for the app icon, including Android's 
 
 
 CI note: launcher-icon generation installs ImageMagick when the runner image does not already provide it, so icon preparation is reproducible across runners.
+
+
+## GTA V presentation references (direction only)
+
+- **Official GTA V PC screenshots:** https://www.rockstargames.com/newswire/article/1748koo9o829a9/screens-from-grand-theft-auto-v-for-pc — study the environmental depth, broad daylight range, cinematic framing and visual separation between foreground streets and distant skyline.
+- **Environment as spatial cinematography:** https://www.gdcvault.com/play/1025736/Environment-Design-as-Spatial-Cinematography — a GTA V Online-focused GDC talk on using composition, player movement and sightlines to guide attention.
+- **Art-direction interview:** https://www.igrandtheftauto.com/gta5/news/buzzfeed-interviews-art-director-aaron-garbut — discusses tuning lighting and colour to create a strong sense of place.
+
+**Applied locally:** use the cinematic readability and environmental layering as inspiration, while keeping Kochi's Kerala architecture, tropical foliage, backwaters, power lines, shop signage and the established story. GTA V assets, textures, models and branding are not copied. This is still a lightweight procedural Android build; asset-authored environments and full skeletal animation remain a separate production phase.

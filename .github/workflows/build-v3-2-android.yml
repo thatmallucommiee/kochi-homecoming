@@ -714,6 +714,192 @@ jobs:
           print("Added local-shop street dressing, a Marine Drive-inspired promenade, Chinese fishing-net silhouettes, port-crane skyline and backwater ferries.")
           PY
 
+      - name: GTA V inspired cinematic presentation pass
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/scripts/game.gd" "$PROJECT_DIR/scripts/player_controller.gd" "$PROJECT_DIR/tools" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          game_path, player_path, tools_dir = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
+          g = game_path.read_text(encoding="utf-8")
+          p = player_path.read_text(encoding="utf-8")
+
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+
+          # Cinematic outdoor light: strong sky gradient, warm sun, restrained haze and
+          # a slightly richer colour grade, all using Godot's mobile Compatibility renderer.
+          if "var sky := Sky.new()" not in g:
+              marker = "    var env := Environment.new()\n"
+              require(marker in g, "Could not locate environment setup for sky pass")
+              sky_setup = """    var env := Environment.new()
+              var sky := Sky.new()
+              var sky_material := ProceduralSkyMaterial.new()
+              sky_material.sky_top_color = Color(0.11, 0.27, 0.40)
+              sky_material.sky_horizon_color = Color(0.63, 0.76, 0.79)
+              sky_material.ground_bottom_color = Color(0.075, 0.085, 0.072)
+              sky_material.ground_horizon_color = Color(0.38, 0.47, 0.42)
+              sky_material.sun_angle_max = 9.0
+              sky_material.use_debanding = true
+              sky.sky_material = sky_material
+          """
+              g = g.replace(marker, sky_setup, 1)
+          g = g.replace("env.background_mode = Environment.BG_COLOR", "env.background_mode = Environment.BG_SKY", 1)
+          bg_line = "    env.background_mode = Environment.BG_SKY\n"
+          if "    env.sky = sky\n" not in g:
+              require(bg_line in g, "Could not wire procedural sky into environment")
+              g = g.replace(bg_line, bg_line + "    env.sky = sky\n", 1)
+          g = g.replace("env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR", "env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY", 1)
+          g = g.replace("env.ambient_light_energy = 0.65", "env.ambient_light_energy = 0.76", 1)
+          g = g.replace("env.tonemap_mode = Environment.TONE_MAPPER_FILMIC", "env.tonemap_mode = Environment.TONE_MAPPER_ACES", 1)
+          g, color_count = re.subn(r"(?m)^    env\.fog_light_color = .+$", "    env.fog_light_color = Color(0.59, 0.70, 0.72)", g, count=1)
+          g, density_count = re.subn(r"(?m)^    env\.fog_density = .+$", "    env.fog_density = 0.0026", g, count=1)
+          require(color_count == 1 and density_count == 1, "Could not tune outdoor atmosphere")
+          if "env.adjustment_enabled = true" not in g:
+              density_line = "    env.fog_density = 0.0026\n"
+              grade = """    env.adjustment_enabled = true
+              env.adjustment_brightness = 1.02
+              env.adjustment_contrast = 1.06
+              env.adjustment_saturation = 1.08
+          """
+              g = g.replace(density_line, density_line + grade, 1)
+          sun_marker = "    sun.light_energy = 1.0\n"
+          if "sun.light_color = Color(1.0, 0.92, 0.78)" not in g:
+              require(sun_marker in g, "Could not locate sun settings")
+              g = g.replace(sun_marker, sun_marker + "    sun.light_color = Color(1.0, 0.92, 0.78)\n", 1)
+
+          # Neighborhood silhouettes: selected terracotta rooflines, balconies and AC units
+          # break the uniform block grid without inflating every building with detail meshes.
+          building_marker = "                if int(abs(x * 2 + z)) % 3 == 0:\n"
+          buildings = """                if height <= 6.8 and int(abs(x - z)) % 4 == 0:
+                      var roof_left: MeshInstance3D = add_box(world, "KeralaTerracottaRoofLeft", Vector3(bx - width * 0.235, height + 0.38, bz), Vector3(width * 0.53, 0.16, 18.4), Color(0.32, 0.12, 0.075), false)
+                      roof_left.rotation.z = -0.18
+                      var roof_right: MeshInstance3D = add_box(world, "KeralaTerracottaRoofRight", Vector3(bx + width * 0.235, height + 0.38, bz), Vector3(width * 0.53, 0.16, 18.4), Color(0.37, 0.15, 0.09), false)
+                      roof_right.rotation.z = 0.18
+                  if height >= 8.0 and int(abs(x * 2 + z)) % 5 == 0:
+                      var balcony_y: float = minf(height - 0.95, 4.0)
+                      add_box(world, "BalconySlab", Vector3(bx, balcony_y, bz - 9.02), Vector3(width * 0.73, 0.12, 0.86), Color(0.28, 0.30, 0.28), false)
+                      add_box(world, "BalconyRailTop", Vector3(bx, balcony_y + 0.70, bz - 9.47), Vector3(width * 0.70, 0.07, 0.07), Color(0.16, 0.20, 0.20), false)
+                      for baluster_i in range(5):
+                          var baluster_x: float = bx + (float(baluster_i) - 2.0) * width * 0.145
+                          add_box(world, "BalconyBaluster", Vector3(baluster_x, balcony_y + 0.37, bz - 9.47), Vector3(0.045, 0.58, 0.06), Color(0.22, 0.26, 0.26), false)
+                  if int(abs(x - z * 2)) % 4 == 1:
+                      add_box(world, "WallMountedACUnit", Vector3(bx + width * 0.33, 2.45, bz - 8.95), Vector3(0.62, 0.42, 0.28), Color(0.70, 0.71, 0.66), false)
+                      add_box(world, "ACVentGrille", Vector3(bx + width * 0.33, 2.45, bz - 9.105), Vector3(0.39, 0.23, 0.035), Color(0.25, 0.29, 0.29), false)
+          """
+          if "KeralaTerracottaRoofLeft" not in g:
+              require(building_marker in g, "Could not locate building loop for roof/balcony variation")
+              g = g.replace(building_marker, buildings + building_marker, 1)
+
+          # GTA-style camera language: subtle over-shoulder framing on foot, wider and
+          # farther back in a vehicle, with eased transitions and speed-sensitive FOV.
+          camera_marker = "    camera_pivot.rotation.x = camera_pitch\n"
+          camera_detail = """    camera_pivot.rotation.x = camera_pitch
+              var target_camera_position: Vector3 = Vector3(0.62, 0.98, 5.45)
+              var target_camera_fov: float = 70.0
+              if active_vehicle != null and is_instance_valid(active_vehicle):
+                  var vehicle_speed: float = absf(active_vehicle.signed_speed)
+                  target_camera_position = Vector3(0.34, 1.22, 6.85 + vehicle_speed * 0.035)
+                  target_camera_fov = clampf(70.0 + vehicle_speed * 0.30, 70.0, 78.0)
+              var camera_follow_weight: float = 1.0 - exp(-delta * 4.2)
+              camera.position = camera.position.lerp(target_camera_position, camera_follow_weight)
+              camera.fov = lerpf(camera.fov, target_camera_fov, 1.0 - exp(-delta * 3.3))
+          """
+          if "target_camera_position: Vector3" not in p:
+              require(camera_marker in p, "Could not locate third-person camera update")
+              p = p.replace(camera_marker, camera_detail, 1)
+
+          # A small local streetscape pass: layered tropical trees, overhead utility
+          # lines and actual 3D shop lettering. All art is generated from primitives;
+          # no GTA models, textures or copyrighted game assets are copied.
+          call_marker = "    _create_kochi_landmarks()\n"
+          if "_create_gta_style_streetscape()" not in g:
+              require(call_marker in g, "Could not locate Kochi landmark setup call")
+              g = g.replace(call_marker, call_marker + "    _create_gta_style_streetscape()\n", 1)
+
+          helper_marker = "func add_box(parent: Node, node_name: String, pos: Vector3, size: Vector3, color: Color, collision: bool) -> MeshInstance3D:\n"
+          streetscape = """func _create_gta_style_streetscape() -> void:
+              # Mixed tropical foliage creates softer, less grid-like street silhouettes.
+              var tree_locations: Array[Vector3] = [
+                  Vector3(-148.0, 0.0, -160.0), Vector3(-148.0, 0.0, -70.0),
+                  Vector3(-148.0, 0.0, 10.0), Vector3(-148.0, 0.0, 90.0),
+                  Vector3(-148.0, 0.0, 170.0), Vector3(12.0, 0.0, -160.0),
+                  Vector3(12.0, 0.0, -70.0), Vector3(12.0, 0.0, 10.0),
+                  Vector3(12.0, 0.0, 90.0), Vector3(12.0, 0.0, 170.0),
+                  Vector3(172.0, 0.0, -115.0), Vector3(172.0, 0.0, 45.0),
+                  Vector3(172.0, 0.0, 155.0)
+              ]
+              var canopy_colors: Array[Color] = [Color(0.10, 0.27, 0.13), Color(0.13, 0.32, 0.16), Color(0.19, 0.35, 0.17)]
+              for tree_i in range(tree_locations.size()):
+                  var tree_pos: Vector3 = tree_locations[tree_i]
+                  add_cylinder(world, "BroadleafTreeTrunk", tree_pos + Vector3(0.0, 1.8, 0.0), 0.17, 3.6, Color(0.28, 0.19, 0.12), false)
+                  var canopy_color: Color = canopy_colors[tree_i % canopy_colors.size()]
+                  add_sphere(world, "BroadleafTreeCanopy", tree_pos + Vector3(0.0, 3.75, 0.0), Vector3(2.1, 1.85, 2.1), canopy_color, false)
+                  add_sphere(world, "BroadleafTreeCanopy", tree_pos + Vector3(0.95, 3.55, 0.18), Vector3(1.6, 1.45, 1.7), canopy_color.lightened(0.06), false)
+              # Kerala-style power poles and sag-free low-cost wire spans provide mid-distance detail.
+              var pole_columns: Array[float] = [-148.0, 12.0, 172.0]
+              var pole_rows: Array[float] = [-142.0, -27.0, 88.0, 203.0]
+              for pole_x in pole_columns:
+                  for row_i in range(pole_rows.size()):
+                      var pole_z: float = pole_rows[row_i]
+                      add_cylinder(world, "KeralaPowerPole", Vector3(pole_x, 3.15, pole_z), 0.105, 6.3, Color(0.28, 0.23, 0.18), false)
+                      add_box(world, "PowerPoleCrossarm", Vector3(pole_x, 5.85, pole_z), Vector3(1.65, 0.10, 0.12), Color(0.26, 0.25, 0.22), false)
+                      add_sphere(world, "PowerLineInsulator", Vector3(pole_x - 0.55, 5.92, pole_z), Vector3(0.13, 0.16, 0.13), Color(0.58, 0.57, 0.49), false)
+                      add_sphere(world, "PowerLineInsulator", Vector3(pole_x + 0.55, 5.92, pole_z), Vector3(0.13, 0.16, 0.13), Color(0.58, 0.57, 0.49), false)
+                      if row_i < pole_rows.size() - 1:
+                          var span: float = pole_rows[row_i + 1] - pole_z
+                          add_box(world, "OverheadUtilityWire", Vector3(pole_x - 0.55, 5.88, pole_z + span * 0.5), Vector3(0.035, 0.035, span), Color(0.055, 0.065, 0.067), false)
+                          add_box(world, "OverheadUtilityWire", Vector3(pole_x + 0.55, 5.88, pole_z + span * 0.5), Vector3(0.035, 0.035, span), Color(0.055, 0.065, 0.067), false)
+              # Hand-authored 3D shop lettering marks different kinds of Kochi streets.
+              var shop_signs: Array[Dictionary] = [
+                  {"label": "CHAYA KADA", "position": Vector3(-218.0, 2.36, -161.77), "width": 8.5},
+                  {"label": "KOCHI MOTOR WORKS", "position": Vector3(-182.0, 2.36, -95.77), "width": 10.5},
+                  {"label": "FRESH FISH", "position": Vector3(-138.0, 2.36, 78.23), "width": 8.5}
+              ]
+              for sign_data in shop_signs:
+                  var sign_pos: Vector3 = sign_data["position"]
+                  var sign_width: float = sign_data["width"]
+                  add_box(world, "LocalBusinessSign", sign_pos, Vector3(sign_width, 0.62, 0.12), Color(0.045, 0.19, 0.20), false)
+                  var sign_text := Label3D.new()
+                  sign_text.name = "LocalBusinessSignText"
+                  sign_text.text = str(sign_data["label"])
+                  sign_text.font_size = 36
+                  sign_text.pixel_size = 0.006
+                  sign_text.outline_size = 5
+                  sign_text.modulate = Color(0.96, 0.82, 0.55)
+                  sign_text.position = sign_pos + Vector3(0.0, 0.0, -0.075)
+                  world.add_child(sign_text)
+
+          """
+          if "func _create_gta_style_streetscape() -> void:" not in g:
+              require(helper_marker in g, "Could not locate helper insertion point for local streetscape")
+              g = g.replace(helper_marker, streetscape + helper_marker, 1)
+
+          game_path.write_text(g, encoding="utf-8")
+          player_path.write_text(p, encoding="utf-8")
+
+          quality_test = '''from pathlib import Path
+
+          root = Path(__file__).resolve().parents[1]
+          game = (root / "scripts/game.gd").read_text(encoding="utf-8")
+          player = (root / "scripts/player_controller.gd").read_text(encoding="utf-8")
+          assert "ProceduralSkyMaterial" in game and "Environment.TONE_MAPPER_ACES" in game
+          assert "env.adjustment_contrast = 1.06" in game and "env.fog_density = 0.0026" in game
+          assert "KeralaTerracottaRoofLeft" in game and "BalconySlab" in game and "WallMountedACUnit" in game
+          assert "BroadleafTreeCanopy" in game and "OverheadUtilityWire" in game
+          assert "LocalBusinessSignText" in game and "CHAYA KADA" in game
+          assert "target_camera_position: Vector3" in player and "target_camera_fov: float" in player
+          assert "camera.position.lerp(target_camera_position" in player and "camera.fov = lerpf" in player
+          print("GTA-inspired presentation checks passed: cinematic sky/grade, adaptive third-person camera, varied Kerala rooflines, foliage, power lines and local signage.")
+          '''
+          (tools_dir / "test_gta_style.py").write_text(quality_test, encoding="utf-8")
+          print("Applied cinematic sky/colour grade, speed-aware third-person framing, varied Kerala building silhouettes, tropical foliage, utility lines and local 3D signage.")
+          PY
+
       - name: Run static and drivetrain checks
         shell: bash
         run: |
@@ -723,6 +909,7 @@ jobs:
           python3 tools/test_touch_controls.py
           python3 tools/test_visual_quality.py
           python3 tools/test_kochi_landmarks.py
+          python3 tools/test_gta_style.py
 
       - name: Set up Godot 4.7.2
         uses: chickensoft-games/setup-godot@v2
