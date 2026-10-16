@@ -24,6 +24,62 @@ jobs:
           test -f "$GITHUB_WORKSPACE/source/project.godot"
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/source" >> "$GITHUB_ENV"
 
+      - name: Install branded Android launcher icons
+        shell: bash
+        run: |
+          set -euo pipefail
+          ICON_SOURCE="$GITHUB_WORKSPACE/assets/kochi_homecoming_icon_128.png"
+          test -s "$ICON_SOURCE"
+          command -v convert >/dev/null
+          mkdir -p "$PROJECT_DIR/assets"
+          # Legacy icon: preserve the supplied KOCHI HOMECOMING artwork.
+          convert "$ICON_SOURCE" -filter Lanczos -resize 512x512! "$PROJECT_DIR/assets/launcher_icon_512.png"
+          # Android adaptive foreground uses a generous safe-zone margin so launchers can mask it cleanly.
+          convert "$ICON_SOURCE" -filter Lanczos -resize 260x260! -background none -gravity center -extent 432x432 "$PROJECT_DIR/assets/launcher_icon_foreground_432.png"
+          convert -size 432x432 xc:'#071218' "$PROJECT_DIR/assets/launcher_icon_background_432.png"
+          python3 - "$PROJECT_DIR/project.godot" "$PROJECT_DIR/export_presets.cfg" "$PROJECT_DIR/assets" <<'PY'
+          from pathlib import Path
+          import struct
+          import sys
+
+          project_path, preset_path, assets_path = map(Path, sys.argv[1:])
+          project = project_path.read_text(encoding="utf-8")
+          preset = preset_path.read_text(encoding="utf-8")
+          assets = {
+              "launcher_icon_512.png": (512, 512),
+              "launcher_icon_foreground_432.png": (432, 432),
+              "launcher_icon_background_432.png": (432, 432),
+          }
+          for name, expected in assets.items():
+              data = (assets_path / name).read_bytes()
+              assert data[:8] == b"\x89PNG\r\n\x1a\n", f"{name} is not a PNG"
+              size = struct.unpack(">II", data[16:24])
+              assert size == expected, f"{name}: expected {expected}, got {size}"
+          if 'config/icon="res://assets/launcher_icon_512.png"' not in project:
+              marker = 'config/name="Kochi: Homecoming"'
+              assert marker in project, "Could not locate project application name"
+              project = project.replace(marker, marker + '\nconfig/icon="res://assets/launcher_icon_512.png"', 1)
+              project_path.write_text(project, encoding="utf-8")
+          options = (
+              'launcher_icons/main_192x192="res://assets/launcher_icon_512.png"',
+              'launcher_icons/adaptive_foreground_432x432="res://assets/launcher_icon_foreground_432.png"',
+              'launcher_icons/adaptive_background_432x432="res://assets/launcher_icon_background_432.png"',
+          )
+          for option in options:
+              key = option.split("=", 1)[0]
+              if key + "=" not in preset:
+                  marker = 'screen/orientation=1'
+                  assert marker in preset, "Could not locate Android export options"
+                  preset = preset.replace(marker, marker + '\n' + option, 1)
+              else:
+                  lines = preset.splitlines()
+                  preset = '\n'.join(option if line.startswith(key + "=") else line for line in lines) + '\n'
+          preset_path.write_text(preset, encoding="utf-8")
+          assert 'config/icon="res://assets/launcher_icon_512.png"' in project
+          assert all(option in preset for option in options)
+          print("Branded launcher icon verified: project icon, legacy icon, and Android adaptive foreground/background.")
+          PY
+
       - name: Apply Godot 4.7 strict typing fixes
         shell: bash
         run: |
@@ -561,6 +617,96 @@ jobs:
           '''
           (tools_dir / "test_visual_quality.py").write_text(quality_test, encoding="utf-8")
           print("Applied player silhouette, procedural road/facade grain, road-edge lines, crossing, window trims and rooftop tanks.")
+          PY
+
+      - name: Add Kochi waterfront landmarks and local streetscape
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/scripts/game.gd" "$PROJECT_DIR/tools" <<'PY'
+          from pathlib import Path
+          import sys
+
+          game_path = Path(sys.argv[1])
+          g = game_path.read_text(encoding="utf-8")
+          boat_marker = "    boat.max_reverse_speed = 3.0"
+          assert boat_marker in g, "Could not locate world setup landmark insertion point"
+          if "_create_kochi_landmarks()" not in g:
+              g = g.replace(boat_marker, boat_marker + "\n    _create_kochi_landmarks()", 1)
+
+          awning = '                    add_box(world, "ShopAwning", Vector3(bx, 2.6, bz - 9.4), Vector3(width * 0.76, 0.2, 1.35), Color(0.42,0.13,0.11), false)'
+          shop_detail = awning + '''
+                      # Ground-floor shutter and a layered shop fascia make the block read as a lived-in Kerala street.
+                      add_box(world, "ShopRollerShutter", Vector3(bx, 1.02, bz - 8.69), Vector3(width * 0.43, 1.42, 0.08), Color(0.27, 0.30, 0.30), false)
+                      add_box(world, "ShopSignboard", Vector3(bx, 2.30, bz - 8.72), Vector3(width * 0.82, 0.47, 0.10), Color(0.045, 0.22, 0.23), false)
+                      add_box(world, "ShopSignStripe", Vector3(bx, 2.13, bz - 8.79), Vector3(width * 0.75, 0.045, 0.035), Color(0.78, 0.39, 0.12), false)'''
+          if "ShopRollerShutter" not in g:
+              assert awning in g, "Could not locate the existing shopfront awning"
+              g = g.replace(awning, shop_detail, 1)
+
+          landmarks = '''func _create_kochi_landmarks() -> void:
+              # Marine Drive-inspired brick promenade and a simple metal guardrail along the backwaters.
+              add_box(world, "WaterfrontPromenadeBase", Vector3(0, 0.105, 215.0), Vector3(385, 0.25, 12.0), Color(0.39, 0.29, 0.24), true)
+              var paver_colors: Array[Color] = [Color(0.48, 0.34, 0.27), Color(0.43, 0.31, 0.26), Color(0.52, 0.38, 0.30)]
+              for paver_i in range(48):
+                  var paver_x: float = -180.0 + float(paver_i) * 7.5
+                  var paver_color: Color = paver_colors[paver_i % paver_colors.size()]
+                  add_box(world, "PromenadePaver", Vector3(paver_x, 0.245, 215.0), Vector3(7.15, 0.028, 10.4), paver_color, false)
+              add_box(world, "PromenadeRailTop", Vector3(0, 1.20, 222.0), Vector3(375, 0.10, 0.12), Color(0.28, 0.34, 0.35), false)
+              add_box(world, "PromenadeRailMid", Vector3(0, 0.66, 222.0), Vector3(375, 0.075, 0.10), Color(0.25, 0.30, 0.31), false)
+              for rail_i in range(77):
+                  var rail_x: float = -185.0 + float(rail_i) * 4.85
+                  add_cylinder(world, "PromenadeRailPost", Vector3(rail_x, 0.85, 222.0), 0.045, 0.85, Color(0.32, 0.38, 0.39), false)
+              # Repeating benches and warm street lamps give the shoreline a readable pedestrian scale.
+              for amenity_i in range(10):
+                  var amenity_x: float = -165.0 + float(amenity_i) * 36.5
+                  add_box(world, "PromenadeBenchSeat", Vector3(amenity_x, 0.62, 211.5), Vector3(2.1, 0.13, 0.52), Color(0.27, 0.17, 0.105), false)
+                  add_box(world, "PromenadeBenchBack", Vector3(amenity_x, 0.94, 211.8), Vector3(2.1, 0.52, 0.12), Color(0.23, 0.15, 0.10), false)
+                  add_cylinder(world, "PromenadeLampPost", Vector3(amenity_x + 8.0, 2.45, 209.5), 0.07, 4.9, Color(0.19, 0.23, 0.24), false)
+                  add_box(world, "PromenadeLampArm", Vector3(amenity_x + 8.28, 4.78, 209.5), Vector3(0.62, 0.07, 0.07), Color(0.20, 0.23, 0.23), false)
+                  add_sphere(world, "PromenadeLampHead", Vector3(amenity_x + 8.52, 4.70, 209.5), Vector3(0.28, 0.16, 0.18), Color(0.92, 0.70, 0.38), false)
+              # Fort Kochi's Chinese fishing-net silhouette: paired masts and angled booms at the waterline.
+              for net_x in [-132.0, -72.0, -12.0]:
+                  add_cylinder(world, "FishingNetMast", Vector3(net_x, 4.0, 230.0), 0.15, 8.0, Color(0.25, 0.22, 0.17), false)
+                  add_cylinder(world, "FishingNetCounterMast", Vector3(net_x + 5.2, 3.0, 230.0), 0.11, 6.0, Color(0.28, 0.24, 0.18), false)
+                  var net_boom := add_box(world, "FishingNetBoom", Vector3(net_x + 2.6, 7.1, 230.0), Vector3(6.9, 0.14, 0.16), Color(0.31, 0.26, 0.18), false)
+                  net_boom.rotation.z = -0.23
+                  var net_crossbar := add_box(world, "FishingNetCrossbar", Vector3(net_x + 3.2, 5.5, 230.0), Vector3(0.10, 4.0, 0.12), Color(0.30, 0.25, 0.18), false)
+                  net_crossbar.rotation.z = 0.12
+              # A distant container-port crane skyline adds a distinctive industrial Kochi horizon across the water.
+              for crane_x in [118.0, 180.0]:
+                  add_box(world, "PortCraneLeg", Vector3(crane_x - 4.6, 5.8, 270.0), Vector3(0.42, 11.6, 0.48), Color(0.30, 0.36, 0.37), false)
+                  add_box(world, "PortCraneLeg", Vector3(crane_x + 4.6, 5.8, 270.0), Vector3(0.42, 11.6, 0.48), Color(0.30, 0.36, 0.37), false)
+                  add_box(world, "PortCraneCrossbeam", Vector3(crane_x, 11.45, 270.0), Vector3(10.0, 0.44, 0.48), Color(0.34, 0.40, 0.41), false)
+                  add_box(world, "PortCraneBoom", Vector3(crane_x + 3.2, 11.95, 270.0), Vector3(15.0, 0.32, 0.42), Color(0.37, 0.42, 0.42), false)
+                  add_box(world, "PortCraneBrace", Vector3(crane_x + 3.0, 9.3, 270.0), Vector3(0.16, 5.2, 0.16), Color(0.25, 0.31, 0.32), false)
+                  add_box(world, "PortContainer", Vector3(crane_x + 12.0, 1.3, 282.0), Vector3(11.5, 2.6, 4.0), Color(0.37, 0.12, 0.08), false)
+                  add_box(world, "PortContainer", Vector3(crane_x + 12.0, 4.0, 282.0), Vector3(11.5, 2.6, 4.0), Color(0.12, 0.30, 0.33), false)
+              # Two shallow ferry shapes remain background dressing, not driveable vehicles.
+              for ferry_x in [-72.0, 38.0]:
+                  add_box(world, "BackwaterFerryHull", Vector3(ferry_x, 0.28, 256.0), Vector3(13.0, 0.55, 2.8), Color(0.12, 0.17, 0.18), false)
+                  add_box(world, "BackwaterFerryCabin", Vector3(ferry_x - 1.0, 1.10, 256.0), Vector3(4.2, 1.2, 2.1), Color(0.70, 0.68, 0.58), false)
+                  add_box(world, "BackwaterFerryRoof", Vector3(ferry_x - 1.0, 1.78, 256.0), Vector3(4.5, 0.12, 2.25), Color(0.18, 0.24, 0.25), false)
+
+          '''
+          marker = "func add_box(parent: Node, node_name: String, pos: Vector3, size: Vector3, color: Color, collision: bool) -> MeshInstance3D:\n"
+          if "func _create_kochi_landmarks() -> void:" not in g:
+              assert marker in g, "Could not locate function insertion point for Kochi landmarks"
+              g = g.replace(marker, landmarks + marker, 1)
+          game_path.write_text(g, encoding="utf-8")
+
+          tools_dir = Path(sys.argv[2])
+          test_file = tools_dir / "test_kochi_landmarks.py"
+          test_file.write_text('''from pathlib import Path
+
+          root = Path(__file__).resolve().parents[1]
+          game = (root / "scripts/game.gd").read_text(encoding="utf-8")
+          assert "_create_kochi_landmarks()" in game
+          for feature in ("WaterfrontPromenadeBase", "PromenadeBenchSeat", "FishingNetBoom", "PortCraneBoom", "BackwaterFerryHull", "ShopRollerShutter", "ShopSignboard"):
+              assert feature in game, f"Missing streetscape feature: {feature}"
+          print("Kochi streetscape checks passed: waterfront promenade, benches/lamps, fishing-net silhouettes, port cranes, ferries and shopfronts.")
+          ''', encoding="utf-8")
+          print("Added local-shop street dressing, a Marine Drive-inspired promenade, Chinese fishing-net silhouettes, port-crane skyline and backwater ferries.")
           PY
 
       - name: Run static and drivetrain checks
