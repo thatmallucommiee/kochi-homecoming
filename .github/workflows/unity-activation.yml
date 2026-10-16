@@ -1,4 +1,4 @@
-name: Unity License Setup Guide
+name: Unity License Readiness
 
 on:
   workflow_dispatch:
@@ -7,13 +7,15 @@ permissions:
   contents: read
 
 jobs:
-  explain-setup:
+  license-readiness:
     runs-on: ubuntu-latest
     steps:
-      - name: Explain current Unity Personal license requirement
+      - name: Explain supported Unity Personal licensing route
         run: |
-          echo "::error::The old GameCI manual activation-file action is deprecated and intentionally fails."
-          echo "Unity Personal manual activation is no longer supported by Unity/GameCI's documented flow."
-          echo "Use a valid Unity license file obtained through a supported Unity licensing process, then add its contents as the repository Actions secret UNITY_LICENSE."
-          echo "Do not add Unity account passwords or license contents to repository files or commits."
-          exit 1
+          echo "The old GameCI request-activation-file action is deprecated and cannot create a Personal license request."
+          echo "Unity Personal licenses must be activated by signing in through Unity Hub, or through a currently supported online Unity licensing flow."
+          echo "For this cloud build, make sure the Unity license material is obtained through a supported route and stored in GitHub Actions as UNITY_LICENSE."
+          echo "If your build uses account credentials for the supported GameCI activation flow, store them only as Actions secrets, never in source code."
+          echo "Official Unity license guidance: https://docs.unity.com/en-us/hub/manage-license"
+          echo "Official GameCI activation guidance: https://game.ci/docs/github/activation"
+          echo "This job only reports setup guidance; it does not claim a license has been activated."
