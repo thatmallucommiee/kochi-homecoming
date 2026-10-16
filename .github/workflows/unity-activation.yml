@@ -1,31 +1,19 @@
-name: Request Unity Personal Activation File
+name: Unity License Setup Guide
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - unity-rebuild
-    paths:
-      - ".github/workflows/unity-activation.yml"
 
 permissions:
   contents: read
 
 jobs:
-  request-activation:
-    name: Generate activation request
+  explain-setup:
     runs-on: ubuntu-latest
     steps:
-      - name: Request manual activation file
-        id: activation
-        uses: game-ci/unity-request-activation-file@v2
-        with:
-          unityVersion: 6000.3.26f1
-
-      - name: Upload activation request
-        uses: actions/upload-artifact@v4
-        with:
-          name: Unity-Activation-Request
-          path: ${{ steps.activation.outputs.filePath }}
-          if-no-files-found: error
-          retention-days: 7
+      - name: Explain current Unity Personal license requirement
+        run: |
+          echo "::error::The old GameCI manual activation-file action is deprecated and intentionally fails."
+          echo "Unity Personal manual activation is no longer supported by Unity/GameCI's documented flow."
+          echo "Use a valid Unity license file obtained through a supported Unity licensing process, then add its contents as the repository Actions secret UNITY_LICENSE."
+          echo "Do not add Unity account passwords or license contents to repository files or commits."
+          exit 1
