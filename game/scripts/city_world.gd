@@ -1500,7 +1500,9 @@ func _add_ped_part(parent: Node3D, material_id: String, pos: Vector3, size: Vect
 	part.mesh = mesh
 	part.position = pos
 	part.scale = size
-	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	# Only major character masses cast shadows; tiny face/clothing pieces stay cheap on mobile.
+	var is_major_form := (shape_type == "box" and size.y >= 0.65) or (shape_type == "sphere" and size.x >= 0.30 and size.y >= 0.30)
+	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if is_major_form else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(part)
 
 func _update_walkers(delta: float) -> void:
