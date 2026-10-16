@@ -30,7 +30,11 @@ jobs:
           set -euo pipefail
           ICON_SOURCE="$GITHUB_WORKSPACE/assets/kochi_homecoming_icon_128.png"
           test -s "$ICON_SOURCE"
-          command -v convert >/dev/null
+          if ! command -v convert >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y imagemagick
+          fi
+          command -v convert
           mkdir -p "$PROJECT_DIR/assets"
           # Legacy icon: preserve the supplied KOCHI HOMECOMING artwork.
           convert "$ICON_SOURCE" -filter Lanczos -resize 512x512! "$PROJECT_DIR/assets/launcher_icon_512.png"
