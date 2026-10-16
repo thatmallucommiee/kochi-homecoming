@@ -967,26 +967,51 @@ func _flush_static_batches() -> void:
 		var instance := MultiMeshInstance3D.new()
 		instance.name = "Batch_%s_%s_%s_%s" % [shape_id, material_id, key.get_slice("|", 2), key.get_slice("|", 3)]
 		instance.multimesh = multimesh
-		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# Keep shadows on the large forms that define the city silhouette. Small road markings,
+		# cables and signage stay unshadowed to protect mobile frame time.
+		var key_shadow_material := material_id.begins_with("wall_") or material_id.begins_with("roof_") or material_id == "palm_trunk"
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if key_shadow_material else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_city_root.add_child(instance)
 	_batches.clear()
 
 func _setup_lighting(scene: Node) -> void:
-	var has_sun := not scene.find_children("*", "DirectionalLight3D", true, false).is_empty()
-	if not has_sun:
-		var sun := DirectionalLight3D.new()
+	# Upgrade the starter's existing sun instead of silently accepting its flat,
+	# shadowless setup. Limit the shadow distance for mobile GPUs.
+	var suns := scene.find_children("*", "DirectionalLight3D", true, false)
+	var sun: DirectionalLight3D
+	if suns.is_empty():
+		sun = DirectionalLight3D.new()
 		sun.name = "KochiDaylight"
 		sun.rotation_degrees = Vector3(-48, -28, 0)
-		sun.light_color = Color("#fff0d8")
-		sun.light_energy = 1.0
-		sun.shadow_enabled = false
 		scene.add_child(sun)
-	var has_environment := not scene.find_children("*", "WorldEnvironment", true, false).is_empty()
-	if not has_environment:
-		var environment_node := WorldEnvironment.new()
-		environment_node.name = "KochiAtmosphere"
-		var environment := Environment.new()
-		environment.background_mode = Environment.BG_SKY
+	else:
+		sun = suns[0] as DirectionalLight3D
+	if is_instance_valid(sun):
+		sun.light_color = Color("#fff0d8")
+		sun.light_energy = maxf(sun.light_energy, 0.78)
+		sun.shadow_enabled = true
+		sun.shadow_bias = 0.06
+		sun.shadow_normal_bias = 1.0
+		sun.shadow_opacity = 0.78
+		sun.shadow_blur = 1.2
+		sun.directional_shadow_max_distance = 180.0
+		sun.directional_shadow_fade_start = 0.82
+
+	# Reuse the environment built by the starter, and give the city a restrained
+	# Kerala coastal haze and filmic contrast without enabling expensive screen-space effects.
+	var environments := scene.find_children("*", "WorldEnvironment", true, false)
+	var world_environment: WorldEnvironment
+	if environments.is_empty():
+		world_environment = WorldEnvironment.new()
+		world_environment.name = "KochiAtmosphere"
+		scene.add_child(world_environment)
+	else:
+		world_environment = environments[0] as WorldEnvironment
+	if world_environment.environment == null:
+		world_environment.environment = Environment.new()
+	var environment := world_environment.environment
+	environment.background_mode = Environment.BG_SKY
+	if environment.sky == null:
 		var sky := Sky.new()
 		var sky_material := ProceduralSkyMaterial.new()
 		sky_material.sky_top_color = Color("#4b6878")
@@ -995,15 +1020,16 @@ func _setup_lighting(scene: Node) -> void:
 		sky_material.ground_horizon_color = Color("#a1a9a4")
 		sky.sky_material = sky_material
 		environment.sky = sky
-		environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		environment.ambient_light_color = Color("#a6b4bb")
-		environment.ambient_light_energy = 0.68
-		environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-		environment.fog_enabled = true
-		environment.fog_light_color = Color("#aeb9b5")
-		environment.fog_density = 0.0018
-		environment_node.environment = environment
-		scene.add_child(environment_node)
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color("#a6b4bb")
+	environment.ambient_light_energy = maxf(environment.ambient_light_energy, 0.68)
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.fog_enabled = true
+	environment.fog_light_color = Color("#aeb9b5")
+	environment.fog_density = 0.0008
+	environment.adjustment_enabled = true
+	environment.adjustment_contrast = 1.05
+	environment.adjustment_saturation = 0.96
 
 func _build_traffic() -> void:
 	var body_colors := ["car_white", "car_silver", "car_blue", "car_red", "car_green", "car_black"]
