@@ -9,6 +9,7 @@ var _in_vehicle := false
 var _vehicle_root: Node3D
 var _drive_hud: CanvasLayer
 var _drive_controls: Control
+var _speed_label: Label
 var _throttle := 0.0
 var _brake := 0.0
 var _steering_input := 0.0
@@ -37,6 +38,10 @@ func _process(_delta: float) -> void:
 		_force_exit()
 	if not _in_vehicle:
 		_offer_vehicle_interaction()
+	if is_instance_valid(_speed_label):
+		var speed_kmh := int(round(_vehicle.linear_velocity.length() * 3.6)) if is_instance_valid(_vehicle) else 0
+		_speed_label.text = "%03d KM/H" % speed_kmh
+		_speed_label.visible = _in_vehicle
 
 func _physics_process(delta: float) -> void:
 	if not _in_vehicle or not is_instance_valid(_vehicle):
@@ -51,16 +56,30 @@ func _physics_process(delta: float) -> void:
 	var throttle := maxf(_throttle, keyboard_throttle)
 	var brake := maxf(_brake, keyboard_brake)
 	var steer := _steering_input if absf(_steering_input) > 0.01 else keyboard_steer
-	_steering_smoothed = move_toward(_steering_smoothed, steer, delta * 2.8)
-	_vehicle.engine_force = throttle * 2400.0
-	_vehicle.brake = brake * 42.0
-	_vehicle.steering = _steering_smoothed * 0.42
+	_steering_smoothed = move_toward(_steering_smoothed, steer, delta * 3.5)
+	var forward_speed := _vehicle.linear_velocity.dot(-_vehicle.global_transform.basis.z)
+	var engine_force := throttle * 3000.0
+	var braking_force := brake * 58.0
+	# Once nearly stopped, holding brake selects reverse rather than locking the car forever.
+	if brake > 0.01 and absf(forward_speed) < 1.8:
+		engine_force = -brake * 1650.0
+		braking_force = 0.0
+	elif brake > 0.01:
+		engine_force = 0.0
+	var torque_fade := clampf(1.0 - absf(forward_speed) / 48.0, 0.28, 1.0)
+	_vehicle.engine_force = engine_force * (torque_fade if engine_force >= 0.0 else minf(1.0, torque_fade + 0.15))
+	_vehicle.brake = braking_force
+	# Reduce steering lock progressively with speed so it does not spin like a shopping cart.
+	var steering_limit := lerpf(0.40, 0.17, clampf(absf(forward_speed) / 27.0, 0.0, 1.0))
+	_vehicle.steering = _steering_smoothed * steering_limit
 
 func _create_vehicle(parent: Node3D) -> VehicleBody3D:
 	var body := VehicleBody3D.new()
 	body.name = "DrivableCompactCar"
 	body.mass = 1120.0
-	body.position = Vector3(2.0, 0.56, 21.5)
+	body.position = Vector3(2.0, 0.56, 3.75)
+	body.linear_damp = 0.08
+	body.angular_damp = 1.45
 	# VehicleBody3D's forward axis is local -Z; this puts the car along the east-west road.
 	body.rotation.y = -PI * 0.5
 	body.continuous_cd = true
@@ -105,10 +124,26 @@ func _create_vehicle(parent: Node3D) -> VehicleBody3D:
 	_add_visual_part(body, paint, Vector3(1.86, 0.63, 4.18), Vector3(0, -0.08, 0))
 	_add_visual_part(body, paint, Vector3(1.78, 0.20, 1.28), Vector3(0, 0.18, -1.35))
 	_add_visual_part(body, paint, Vector3(1.75, 0.18, 0.82), Vector3(0, 0.16, 1.52))
-	_add_visual_part(body, glass, Vector3(1.48, 0.62, 2.14), Vector3(0, 0.43, 0.12))
-	_add_visual_part(body, trim, Vector3(1.56, 0.10, 2.20), Vector3(0, 0.77, 0.12))
-	_add_visual_part(body, glass, Vector3(0.045, 0.28, 1.16), Vector3(-0.75, 0.43, 0.13))
-	_add_visual_part(body, glass, Vector3(0.045, 0.28, 1.16), Vector3(0.75, 0.43, 0.13))
+	# A readable compact-sedan silhouette: separate windshields, side glass, roof and pillars.
+	_add_visual_part(body, trim, Vector3(1.22, 0.20, 1.60), Vector3(0, 0.34, 0.12))
+	_add_visual_part(body, glass, Vector3(1.34, 0.39, 0.065), Vector3(0, 0.49, -0.82), Vector3(0.18, 0, 0))
+	_add_visual_part(body, glass, Vector3(1.26, 0.32, 0.065), Vector3(0, 0.48, 0.98), Vector3(-0.20, 0, 0))
+	_add_visual_part(body, paint, Vector3(1.48, 0.12, 1.62), Vector3(0, 0.79, 0.12))
+	_add_visual_part(body, trim, Vector3(1.54, 0.045, 1.78), Vector3(0, 0.855, 0.12))
+	for side in [-1.0, 1.0]:
+		for window_z in [-0.31, 0.50]:
+			_add_visual_part(body, glass, Vector3(0.045, 0.27, 0.70), Vector3(side * 0.755, 0.48, window_z))
+		_add_visual_part(body, paint, Vector3(0.10, 0.46, 0.11), Vector3(side * 0.755, 0.49, -0.79))
+		_add_visual_part(body, trim, Vector3(0.085, 0.43, 0.10), Vector3(side * 0.755, 0.49, 0.10))
+		_add_visual_part(body, paint, Vector3(0.10, 0.42, 0.11), Vector3(side * 0.755, 0.48, 0.95))
+		_add_visual_part(body, trim, Vector3(0.16, 0.11, 0.18), Vector3(side * 0.985, 0.47, -0.77))
+		_add_visual_part(body, glass, Vector3(0.045, 0.06, 0.10), Vector3(side * 1.065, 0.48, -0.77))
+		_add_visual_part(body, trim, Vector3(0.035, 0.04, 0.18), Vector3(side * 0.94, 0.10, -0.10))
+		_add_visual_part(body, trim, Vector3(0.035, 0.04, 0.18), Vector3(side * 0.94, 0.10, 0.62))
+		_add_visual_part(body, trim, Vector3(0.055, 0.11, 1.62), Vector3(side * 0.92, -0.25, 0.12))
+	_add_visual_part(body, trim, Vector3(0.58, 0.18, 0.055), Vector3(0, -0.04, -2.12))
+	_add_visual_part(body, chrome, Vector3(0.46, 0.13, 0.045), Vector3(0, -0.16, -2.13))
+	_add_visual_part(body, chrome, Vector3(0.46, 0.13, 0.045), Vector3(0, -0.16, 2.13))
 	_add_visual_part(body, chrome, Vector3(0.68, 0.15, 0.05), Vector3(0, -0.10, -2.11))
 	_add_visual_part(body, headlamp, Vector3(0.24, 0.17, 0.10), Vector3(-0.63, 0.02, -2.12))
 	_add_visual_part(body, headlamp, Vector3(0.24, 0.17, 0.10), Vector3(0.63, 0.02, -2.12))
@@ -167,14 +202,15 @@ func _create_vehicle(parent: Node3D) -> VehicleBody3D:
 	parent.add_child(body)
 	return body
 
-func _add_visual_part(parent: Node3D, material: Material, dimensions: Vector3, position: Vector3) -> void:
+func _add_visual_part(parent: Node3D, material: Material, dimensions: Vector3, position: Vector3, rotation: Vector3 = Vector3.ZERO) -> void:
 	var mesh := BoxMesh.new()
 	mesh.size = dimensions
 	mesh.material = material
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.position = position
-	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	instance.rotation = rotation
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	parent.add_child(instance)
 
 func _find_player() -> CharacterBody3D:
@@ -325,6 +361,15 @@ func _create_drive_hud() -> void:
 	_drive_controls.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_drive_controls.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_drive_hud.add_child(_drive_controls)
+	_speed_label = Label.new()
+	_speed_label.name = "SpeedReadout"
+	_speed_label.text = "000 KM/H"
+	_speed_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	_speed_label.position = Vector2(24, 76)
+	_speed_label.custom_minimum_size = Vector2(190, 48)
+	_speed_label.add_theme_font_size_override("font_size", 25)
+	_speed_label.add_theme_color_override("font_color", Color("#f2eadc"))
+	_drive_controls.add_child(_speed_label)
 	_make_hold_button("LEFT", Vector2(24, -100), Vector2(76, 64), "steering", -1.0, false)
 	_make_hold_button("RIGHT", Vector2(110, -100), Vector2(76, 64), "steering", 1.0, false)
 	_make_hold_button("BRAKE", Vector2(-196, -100), Vector2(82, 64), "brake", 1.0, true)
