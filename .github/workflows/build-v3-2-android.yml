@@ -767,10 +767,9 @@ jobs:
               env.adjustment_saturation = 1.08
           """
               g = g.replace(density_line, density_line + grade, 1)
-          sun_marker = "    sun.light_energy = 1.0\n"
           if "sun.light_color = Color(1.0, 0.92, 0.78)" not in g:
-              require(sun_marker in g, "Could not locate sun settings")
-              g = g.replace(sun_marker, sun_marker + "    sun.light_color = Color(1.0, 0.92, 0.78)\n", 1)
+              g, sun_count = re.subn(r"(?m)^    sun\\.light_energy = [^\\n]+$", lambda match: match.group(0) + "\\n    sun.light_color = Color(1.0, 0.92, 0.78)", g, count=1)
+              require(sun_count == 1, "Could not locate sun settings")
 
           # Neighborhood silhouettes: selected terracotta rooflines, balconies and AC units
           # break the uniform block grid without inflating every building with detail meshes.
