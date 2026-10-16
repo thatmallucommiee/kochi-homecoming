@@ -190,6 +190,11 @@ jobs:
             echo "Godot reported a script or scene startup error." >&2
             exit 1
           fi
+          if ! grep -Fq "KochiLivingDistrict ready:" "$RUNNER_TEMP/kochihomecoming-smoke.log"; then
+            echo "The procedural city did not report successful initialization." >&2
+            cat "$RUNNER_TEMP/kochihomecoming-smoke.log" >&2
+            exit 1
+          fi
 
       - name: Export debug APK
         run: |
