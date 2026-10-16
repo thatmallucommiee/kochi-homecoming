@@ -1,0 +1,25 @@
+name: UE5 project source validation
+
+on:
+  push:
+    branches: [ue5-rebuild]
+    paths:
+      - "UnrealProject/KochiHomecomingUE5/**"
+      - ".github/workflows/ue5-source-validation.yml"
+  pull_request:
+    branches: [ue5-rebuild]
+    paths:
+      - "UnrealProject/KochiHomecomingUE5/**"
+      - ".github/workflows/ue5-source-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-project-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the UE project descriptor and source references
+        run: python3 UnrealProject/KochiHomecomingUE5/Scripts/ValidateProject.py

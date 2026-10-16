@@ -1,0 +1,29 @@
+name: Package Kochi Homecoming UE5 Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-android:
+    # This runner must already have licensed Unreal Engine 5.8 and its Android toolchain installed.
+    runs-on: [self-hosted, windows, ue5-8, android-sdk]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package Android arm64 development APK
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:UE_ROOT)) {
+            throw "Set the UE_ROOT system environment variable on this self-hosted runner to the installed Unreal Engine 5.8 folder."
+          }
+          & ".\UnrealProject\KochiHomecomingUE5\Scripts\BuildAndroid.ps1" -EngineRoot "$env:UE_ROOT"
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kochi-Homecoming-UE5-Android-APK
+          path: UnrealProject/KochiHomecomingUE5/Builds/Android/**/*.apk
+          if-no-files-found: error
+          retention-days: 14

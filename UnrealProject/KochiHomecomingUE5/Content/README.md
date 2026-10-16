@@ -1,0 +1,3 @@
+# Runtime-built world
+
+The initial UE5 vertical slice creates its district, visible story waypoint, home interior, garage, tea stall and vehicles from native C++ at runtime. No third-party or generated assets are bundled. The primitive character and city meshes are a functional blockout; a production visual pass still needs a rigged character, animations, authored Kerala architecture, vehicle art, audio and optimized materials.

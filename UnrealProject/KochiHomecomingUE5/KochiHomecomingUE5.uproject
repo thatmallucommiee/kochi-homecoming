@@ -1,0 +1,16 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Games",
+  "Description": "Kochi: Homecoming — a mobile-first Unreal Engine 5 third-person story prototype.",
+  "Modules": [
+    {
+      "Name": "KochiHomecomingUE5",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    { "Name": "EnhancedInput", "Enabled": false }
+  ]
+}
