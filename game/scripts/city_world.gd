@@ -19,6 +19,7 @@ var _city_root: Node3D
 var _active_scene: Node
 var _traffic: Array[Dictionary] = []
 var _walkers: Array[Dictionary] = []
+var _idle_citizens: Array[Dictionary] = []
 var _clock := 0.0
 var _built := false
 var _sign_count := 0
@@ -53,6 +54,7 @@ func _process(delta: float) -> void:
 	_clock += delta
 	_update_traffic(delta)
 	_update_walkers(delta)
+	_update_idle_citizens(delta)
 	_update_story_triggers()
 
 func _install_city(scene: Node) -> void:
@@ -71,6 +73,7 @@ func _install_city(scene: Node) -> void:
 	_batches.clear()
 	_traffic.clear()
 	_walkers.clear()
+	_idle_citizens.clear()
 	_sign_count = 0
 	_make_materials()
 	_apply_city_textures()
@@ -1290,18 +1293,21 @@ func _build_idle_citizens() -> void:
 	rafi.position = Vector3(51.0, 0.17, 36.0)
 	rafi.rotation.y = PI
 	_city_root.add_child(rafi)
+	_register_idle_citizen(rafi, 0.4)
 	_add_citizen_collision(rafi.position, 0.30, 1.75)
 	var tea_customer_a := _spawn_pedestrian("shirt_white", "pants_blue")
 	tea_customer_a.name = "TeaStallCustomerA"
 	tea_customer_a.position = Vector3(-44.0, 0.17, 42.0)
 	tea_customer_a.rotation.y = -PI * 0.5
 	_city_root.add_child(tea_customer_a)
+	_register_idle_citizen(tea_customer_a, 1.5)
 	_add_citizen_collision(tea_customer_a.position, 0.30, 1.75)
 	var tea_customer_b := _spawn_pedestrian("shirt_maroon", "pants_dark")
 	tea_customer_b.name = "TeaStallCustomerB"
 	tea_customer_b.position = Vector3(-52.0, 0.17, 41.5)
 	tea_customer_b.rotation.y = PI * 0.5
 	_city_root.add_child(tea_customer_b)
+	_register_idle_citizen(tea_customer_b, 2.6)
 	_add_citizen_collision(tea_customer_b.position, 0.30, 1.75)
 	# Several quiet street-side figures and one vendor near a corner shop.
 	for i in range(5):
@@ -1310,6 +1316,7 @@ func _build_idle_citizens() -> void:
 		citizen.position = Vector3(100.0 + float(i % 3) * 2.2, 0.17, 14.5 + float(i / 3) * 1.4)
 		citizen.rotation.y = float(i % 4) * PI * 0.5
 		_city_root.add_child(citizen)
+		_register_idle_citizen(citizen, float(i) * 0.9)
 		_add_citizen_collision(citizen.global_position, 0.28, 1.7)
 
 	# Additional commuters and neighbours are distributed around separate blocks,
@@ -1333,6 +1340,7 @@ func _build_idle_citizens() -> void:
 		neighbour.position = position
 		neighbour.rotation.y = float((i + 1) % 4) * PI * 0.5
 		_city_root.add_child(neighbour)
+		_register_idle_citizen(neighbour, float(i) * 0.63 + 0.3)
 		_add_citizen_collision(neighbour.global_position, 0.27, 1.7)
 
 func _add_citizen_collision(position: Vector3, radius: float, height: float) -> void:
@@ -1346,6 +1354,32 @@ func _add_citizen_collision(position: Vector3, radius: float, height: float) -> 
 	collision.shape = shape
 	body.add_child(collision)
 	_city_root.add_child(body)
+
+func _register_idle_citizen(root: Node3D, phase: float) -> void:
+	var head := root.get_node_or_null("HeadPivot") as Node3D
+	_idle_citizens.append({
+		"root": root,
+		"head": head,
+		"base_y": root.position.y,
+		"phase": phase,
+		"turn_direction": -1.0 if int(round(phase * 10.0)) % 2 == 0 else 1.0
+	})
+
+func _update_idle_citizens(delta: float) -> void:
+	for agent in _idle_citizens:
+		var root: Node3D = agent["root"]
+		if not is_instance_valid(root):
+			continue
+		var phase := _clock * 1.25 + float(agent["phase"])
+		var base_y := float(agent["base_y"])
+		root.position.y = base_y + sin(phase * 1.6) * 0.012
+		var head: Node3D = agent["head"]
+		if is_instance_valid(head):
+			var direction := float(agent["turn_direction"])
+			head.rotation.y = sin(phase * 0.55) * 0.12 * direction
+			head.rotation.x = sin(phase * 0.8) * 0.018
+		# Tiny shifts in weight make idle citizens feel alive without expensive animation rigs.
+		root.rotation.z = sin(phase * 1.6) * 0.006
 
 func _build_pedestrians() -> void:
 	var shirts := ["shirt_blue", "shirt_white", "shirt_green", "shirt_maroon", "shirt_ochre"]
@@ -1376,29 +1410,61 @@ func _build_pedestrians() -> void:
 func _spawn_pedestrian(shirt_id: String, pants_id: String) -> Node3D:
 	var root := Node3D.new()
 	root.name = "CityPedestrian"
+
+	# Layered clothing and rounded silhouettes replace the old single-block torso.
 	_add_ped_part(root, shirt_id, Vector3(0, 1.02, 0), Vector3(0.46, 0.90, 0.28), "box")
-	_add_ped_part(root, "skin", Vector3(0, 1.68, 0), Vector3(0.34, 0.34, 0.34), "sphere")
-	_add_ped_part(root, "hair", Vector3(0, 1.82, 0.01), Vector3(0.34, 0.16, 0.34), "sphere")
+	_add_ped_part(root, shirt_id, Vector3(-0.21, 1.22, 0), Vector3(0.19, 0.22, 0.28), "sphere")
+	_add_ped_part(root, shirt_id, Vector3(0.21, 1.22, 0), Vector3(0.19, 0.22, 0.28), "sphere")
+	_add_ped_part(root, "wood_light", Vector3(0.0, 1.10, -0.145), Vector3(0.035, 0.34, 0.016), "box")
+	_add_ped_part(root, "wood_light", Vector3(0.13, 1.13, -0.15), Vector3(0.095, 0.13, 0.02), "box")
+	_add_ped_part(root, "skin", Vector3(0, 1.42, 0), Vector3(0.12, 0.16, 0.13), "capsule")
+
+	# A pivoted head allows visible idle glances instead of frozen mannequin faces.
+	var head := Node3D.new()
+	head.name = "HeadPivot"
+	head.position = Vector3(0, 1.68, 0)
+	root.add_child(head)
+	_add_ped_part(head, "skin", Vector3(0, 0, -0.005), Vector3(0.34, 0.36, 0.32), "sphere")
+	_add_ped_part(head, "hair", Vector3(0, 0.135, 0.018), Vector3(0.35, 0.15, 0.33), "sphere")
+	_add_ped_part(head, "hair", Vector3(0, 0.07, -0.14), Vector3(0.29, 0.075, 0.06), "box")
+	_add_ped_part(head, "hair", Vector3(-0.176, -0.015, 0), Vector3(0.055, 0.12, 0.10), "sphere")
+	_add_ped_part(head, "hair", Vector3(0.176, -0.015, 0), Vector3(0.055, 0.12, 0.10), "sphere")
+	_add_ped_part(head, "hair", Vector3(-0.064, 0.045, -0.157), Vector3(0.066, 0.022, 0.018), "box")
+	_add_ped_part(head, "hair", Vector3(0.064, 0.045, -0.157), Vector3(0.066, 0.022, 0.018), "box")
+	_add_ped_part(head, "glass_light", Vector3(-0.062, 0.005, -0.159), Vector3(0.025, 0.022, 0.014), "box")
+	_add_ped_part(head, "glass_light", Vector3(0.062, 0.005, -0.159), Vector3(0.025, 0.022, 0.014), "box")
+	_add_ped_part(head, "skin", Vector3(0.0, -0.015, -0.17), Vector3(0.05, 0.065, 0.055), "sphere")
+	_add_ped_part(head, "wood", Vector3(0.0, -0.085, -0.154), Vector3(0.055, 0.012, 0.012), "box")
+
 	var left_arm := Node3D.new()
 	left_arm.name = "LeftArmPivot"
 	left_arm.position = Vector3(-0.30, 1.28, 0)
 	root.add_child(left_arm)
-	_add_ped_part(left_arm, shirt_id, Vector3(0, -0.28, 0), Vector3(0.15, 0.64, 0.15), "cylinder")
+	_add_ped_part(left_arm, shirt_id, Vector3(0, -0.24, 0), Vector3(0.15, 0.39, 0.15), "capsule")
+	_add_ped_part(left_arm, shirt_id, Vector3(0, -0.45, -0.01), Vector3(0.125, 0.26, 0.13), "capsule")
+	_add_ped_part(left_arm, "skin", Vector3(0, -0.60, -0.025), Vector3(0.105, 0.12, 0.105), "sphere")
 	var right_arm := Node3D.new()
 	right_arm.name = "RightArmPivot"
 	right_arm.position = Vector3(0.30, 1.28, 0)
 	root.add_child(right_arm)
-	_add_ped_part(right_arm, shirt_id, Vector3(0, -0.28, 0), Vector3(0.15, 0.64, 0.15), "cylinder")
+	_add_ped_part(right_arm, shirt_id, Vector3(0, -0.24, 0), Vector3(0.15, 0.39, 0.15), "capsule")
+	_add_ped_part(right_arm, shirt_id, Vector3(0, -0.45, -0.01), Vector3(0.125, 0.26, 0.13), "capsule")
+	_add_ped_part(right_arm, "skin", Vector3(0, -0.60, -0.025), Vector3(0.105, 0.12, 0.105), "sphere")
+
 	var left_leg := Node3D.new()
 	left_leg.name = "LeftLegPivot"
 	left_leg.position = Vector3(-0.13, 0.62, 0)
 	root.add_child(left_leg)
-	_add_ped_part(left_leg, pants_id, Vector3(0, -0.27, 0), Vector3(0.16, 0.66, 0.16), "cylinder")
+	_add_ped_part(left_leg, pants_id, Vector3(0, -0.23, 0), Vector3(0.16, 0.43, 0.17), "capsule")
+	_add_ped_part(left_leg, pants_id, Vector3(0, -0.43, -0.005), Vector3(0.135, 0.25, 0.14), "capsule")
+	_add_ped_part(left_leg, "tire", Vector3(0, -0.57, -0.07), Vector3(0.17, 0.095, 0.29), "box")
 	var right_leg := Node3D.new()
 	right_leg.name = "RightLegPivot"
 	right_leg.position = Vector3(0.13, 0.62, 0)
 	root.add_child(right_leg)
-	_add_ped_part(right_leg, pants_id, Vector3(0, -0.27, 0), Vector3(0.16, 0.66, 0.16), "cylinder")
+	_add_ped_part(right_leg, pants_id, Vector3(0, -0.23, 0), Vector3(0.16, 0.43, 0.17), "capsule")
+	_add_ped_part(right_leg, pants_id, Vector3(0, -0.43, -0.005), Vector3(0.135, 0.25, 0.14), "capsule")
+	_add_ped_part(right_leg, "tire", Vector3(0, -0.57, -0.07), Vector3(0.17, 0.095, 0.29), "box")
 	return root
 
 func _add_ped_part(parent: Node3D, material_id: String, pos: Vector3, size: Vector3, shape_type: String) -> void:
@@ -1408,16 +1474,23 @@ func _add_ped_part(parent: Node3D, material_id: String, pos: Vector3, size: Vect
 			var sphere := SphereMesh.new()
 			sphere.radius = 0.5
 			sphere.height = 1.0
-			sphere.radial_segments = 8
-			sphere.rings = 4
+			sphere.radial_segments = 10
+			sphere.rings = 6
 			mesh = sphere
 		"cylinder":
 			var cylinder := CylinderMesh.new()
 			cylinder.top_radius = 0.5
 			cylinder.bottom_radius = 0.5
 			cylinder.height = 1.0
-			cylinder.radial_segments = 6
+			cylinder.radial_segments = 8
 			mesh = cylinder
+		"capsule":
+			var capsule := CapsuleMesh.new()
+			capsule.radius = 0.5
+			capsule.height = 2.0
+			capsule.radial_segments = 10
+			capsule.rings = 5
+			mesh = capsule
 		_:
 			var cube := BoxMesh.new()
 			cube.size = Vector3.ONE
@@ -1427,7 +1500,7 @@ func _add_ped_part(parent: Node3D, material_id: String, pos: Vector3, size: Vect
 	part.mesh = mesh
 	part.position = pos
 	part.scale = size
-	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	parent.add_child(part)
 
 func _update_walkers(delta: float) -> void:
