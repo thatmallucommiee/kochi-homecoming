@@ -106,7 +106,7 @@ namespace KochiHomecoming.UI
             // The right half is a camera-look surface. Buttons created afterwards sit above it.
             Image lookImage = CreateImage("Camera Look Area", canvas.transform,
                 new Vector2(0.38f, 0f), new Vector2(1f, 1f),
-                new Vector2(1f, 0.5f), Vector2.zero, new Vector2(0.01f, 0f, 0f, 0.025f));
+                new Vector2(1f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.01f, 0f, 0f, 0.025f));
             lookImage.raycastTarget = true;
             CameraLookPad lookPad = lookImage.gameObject.AddComponent<CameraLookPad>();
             lookPad.Initialize(delta => { if (orbitCamera != null) orbitCamera.SetLookInput(delta); });
