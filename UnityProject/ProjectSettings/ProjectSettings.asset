@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 28
+  productGUID: 00000000000000000000000000000000
+  AndroidProfiler: 0
+  AndroidFilterTouchesWhenObscured: 0
+  defaultScreenOrientation: 3
+  companyName: Aswin Mohan
+  productName: Kochi Homecoming
+  applicationIdentifier:
+    Android: com.aswinmohan.kochihomecoming
+  bundleVersion: 0.1
+  AndroidBundleVersionCode: 1
+  AndroidMinSdkVersion: 26
+  AndroidTargetSdkVersion: 0
+  scriptingBackend:
+    Android: 1
+  il2cppCompilerConfiguration:
+    Android: 0
+  apiCompatibilityLevel:
+    Android: 6
+  AndroidTargetArchitectures: 2
+  stripEngineCode: 1
+  useCustomMainManifest: 0
+  useCustomLauncherManifest: 0
+  useCustomBaseGradleTemplate: 0
+  useCustomGradlePropertiesTemplate: 0
+  useCustomProguardFile: 0
+  mobileMTRendering: 1
+  m_ActiveColorSpace: 0
+  m_MTRendering: 1
+  m_BuildTargetIcons: []
+  m_BuildTargetBatching:
+  - buildTarget: Android
+    staticBatching: 1
+    dynamicBatching: 0
+  m_BuildTargetGraphicsJobs:
+  - buildTarget: Android
+    graphicsJobs: 0
+  m_BuildTargetGraphicsAPIs:
+  - buildTarget: Android
+    APIs: 15000000000000000
+    m_Automatic: 1
+  m_AndroidDefaultConfig:
+    applicationEntry: 1
+    architecture: 2
