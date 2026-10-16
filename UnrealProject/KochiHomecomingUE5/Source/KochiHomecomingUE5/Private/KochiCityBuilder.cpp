@@ -1,6 +1,9 @@
 #include "KochiCityBuilder.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/SkyLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Engine/StaticMesh.h"
@@ -44,6 +47,7 @@ AKochiCityBuilder::AKochiCityBuilder()
 void AKochiCityBuilder::BeginPlay()
 {
     Super::BeginPlay();
+    BuildLighting();
     BuildGroundAndRoads();
     BuildBuildings();
     BuildStreetLife();
@@ -120,6 +124,39 @@ void AKochiCityBuilder::AddSphere(FName Style, const FVector& Location, const FV
         Component->AddInstance(FTransform(FRotator::ZeroRotator, Location,
             FVector(DimensionsCm.X / 100.f, DimensionsCm.Y / 100.f, DimensionsCm.Z / 100.f)));
     }
+}
+
+void AKochiCityBuilder::BuildLighting()
+{
+    // The engine entry map is intentionally empty, so establish a warm daylight rig here.
+    UDirectionalLightComponent* Sun = NewObject<UDirectionalLightComponent>(this, TEXT("KochiSun"));
+    Sun->SetupAttachment(SceneRoot);
+    Sun->SetMobility(EComponentMobility::Movable);
+    Sun->SetRelativeRotation(FRotator(-38.f, -28.f, 0.f));
+    Sun->SetLightColor(FLinearColor(1.f, 0.83f, 0.69f));
+    Sun->SetIntensity(65000.f);
+    Sun->SetCastShadows(true);
+    AddInstanceComponent(Sun);
+    Sun->RegisterComponent();
+
+    USkyLightComponent* Sky = NewObject<USkyLightComponent>(this, TEXT("KochiSkyLight"));
+    Sky->SetupAttachment(SceneRoot);
+    Sky->SetMobility(EComponentMobility::Movable);
+    Sky->SetSourceType(ESkyLightSourceType::SLS_CapturedScene);
+    Sky->SetIntensity(1.15f);
+    Sky->bRealTimeCapture = false;
+    AddInstanceComponent(Sky);
+    Sky->RegisterComponent();
+    Sky->RecaptureSky();
+
+    UExponentialHeightFogComponent* Fog = NewObject<UExponentialHeightFogComponent>(this, TEXT("KochiAtmosphere"));
+    Fog->SetupAttachment(SceneRoot);
+    Fog->SetMobility(EComponentMobility::Movable);
+    Fog->SetFogDensity(0.000025f);
+    Fog->SetFogHeightFalloff(0.12f);
+    Fog->SetFogInscatteringColor(FLinearColor(0.48f, 0.53f, 0.56f));
+    AddInstanceComponent(Fog);
+    Fog->RegisterComponent();
 }
 
 void AKochiCityBuilder::BuildGroundAndRoads()
