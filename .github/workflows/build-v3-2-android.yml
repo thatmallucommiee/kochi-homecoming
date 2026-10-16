@@ -635,7 +635,12 @@ jobs:
               g = g.replace(boat_marker, boat_marker + "\n    _create_kochi_landmarks()", 1)
 
           awning = '                    add_box(world, "ShopAwning", Vector3(bx, 2.6, bz - 9.4), Vector3(width * 0.76, 0.2, 1.35), Color(0.42,0.13,0.11), false)'
-          shop_detail = awning + "\\n                    # Ground-floor shutter and layered fascia make the block read as a lived-in Kerala street.\\n                    add_box(world, \\"ShopRollerShutter\\", Vector3(bx, 1.02, bz - 8.69), Vector3(width * 0.43, 1.42, 0.08), Color(0.27, 0.30, 0.30), false)\\n                    add_box(world, \\"ShopSignboard\\", Vector3(bx, 2.30, bz - 8.72), Vector3(width * 0.82, 0.47, 0.10), Color(0.045, 0.22, 0.23), false)\\n                    add_box(world, \\"ShopSignStripe\\", Vector3(bx, 2.13, bz - 8.79), Vector3(width * 0.75, 0.045, 0.035), Color(0.78, 0.39, 0.12), false)"
+          shop_detail = awning + "\n" + "\n".join([
+              '                    # Ground-floor shutter and layered fascia make the block read as a lived-in Kerala street.',
+              '                    add_box(world, "ShopRollerShutter", Vector3(bx, 1.02, bz - 8.69), Vector3(width * 0.43, 1.42, 0.08), Color(0.27, 0.30, 0.30), false)',
+              '                    add_box(world, "ShopSignboard", Vector3(bx, 2.30, bz - 8.72), Vector3(width * 0.82, 0.47, 0.10), Color(0.045, 0.22, 0.23), false)',
+              '                    add_box(world, "ShopSignStripe", Vector3(bx, 2.13, bz - 8.79), Vector3(width * 0.75, 0.045, 0.035), Color(0.78, 0.39, 0.12), false)',
+          ])
           if "ShopRollerShutter" not in g:
               assert awning in g, "Could not locate the existing shopfront awning"
               g = g.replace(awning, shop_detail, 1)
