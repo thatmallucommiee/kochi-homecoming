@@ -38,7 +38,9 @@ Unity -batchmode -quit -projectPath <path-to-UnityProject> -executeMethod KochiH
 
 Install Android Build Support, SDK, NDK and OpenJDK through Unity Hub before building locally.
 
-The GitHub Actions workflow `.github/workflows/unity-android-apk.yml` is configured to build an APK and upload it as a downloadable workflow artifact. GitHub must have the Unity Personal license file available as the repository Actions secret `UNITY_LICENSE`; without that secret the build stops at its preflight check. The build artifact is not available until a successful workflow run completes.
+The GitHub Actions workflow `.github/workflows/unity-android-apk.yml` builds an APK and uploads it as a downloadable workflow artifact. It requires the Unity license file as the repository Actions secret `UNITY_LICENSE`; without that secret, the build stops at its preflight check.
+
+For a Unity Personal license, the separate **Request Unity Personal Activation File** workflow is provided at `.github/workflows/unity-activation.yml`. Run it from GitHub Actions, download its `.alf` artifact, complete the license activation process with Unity, then add the resulting `.ulf` file contents as the repository Actions secret `UNITY_LICENSE`. GameCI documents this manual activation process [here](https://game.ci/docs/3/github/activation/). After that one-time setup, the APK workflow can run automatically on Unity project changes or be started manually. The APK appears under that run's **Artifacts** section, only after a successful build.
 
 ## Current verification status
 
