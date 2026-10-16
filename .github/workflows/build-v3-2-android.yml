@@ -776,20 +776,20 @@ jobs:
           # break the uniform block grid without inflating every building with detail meshes.
           building_marker = "                if int(abs(x * 2 + z)) % 3 == 0:\n"
           buildings = """                if height <= 6.8 and int(abs(x - z)) % 4 == 0:
-                      var roof_left: MeshInstance3D = add_box(world, "KeralaTerracottaRoofLeft", Vector3(bx - width * 0.235, height + 0.38, bz), Vector3(width * 0.53, 0.16, 18.4), Color(0.32, 0.12, 0.075), false)
-                      roof_left.rotation.z = -0.18
-                      var roof_right: MeshInstance3D = add_box(world, "KeralaTerracottaRoofRight", Vector3(bx + width * 0.235, height + 0.38, bz), Vector3(width * 0.53, 0.16, 18.4), Color(0.37, 0.15, 0.09), false)
-                      roof_right.rotation.z = 0.18
-                  if height >= 8.0 and int(abs(x * 2 + z)) % 5 == 0:
-                      var balcony_y: float = minf(height - 0.95, 4.0)
-                      add_box(world, "BalconySlab", Vector3(bx, balcony_y, bz - 9.02), Vector3(width * 0.73, 0.12, 0.86), Color(0.28, 0.30, 0.28), false)
-                      add_box(world, "BalconyRailTop", Vector3(bx, balcony_y + 0.70, bz - 9.47), Vector3(width * 0.70, 0.07, 0.07), Color(0.16, 0.20, 0.20), false)
-                      for baluster_i in range(5):
-                          var baluster_x: float = bx + (float(baluster_i) - 2.0) * width * 0.145
-                          add_box(world, "BalconyBaluster", Vector3(baluster_x, balcony_y + 0.37, bz - 9.47), Vector3(0.045, 0.58, 0.06), Color(0.22, 0.26, 0.26), false)
-                  if int(abs(x - z * 2)) % 4 == 1:
-                      add_box(world, "WallMountedACUnit", Vector3(bx + width * 0.33, 2.45, bz - 8.95), Vector3(0.62, 0.42, 0.28), Color(0.70, 0.71, 0.66), false)
-                      add_box(world, "ACVentGrille", Vector3(bx + width * 0.33, 2.45, bz - 9.105), Vector3(0.39, 0.23, 0.035), Color(0.25, 0.29, 0.29), false)
+                              var roof_left: MeshInstance3D = add_box(world, "KeralaTerracottaRoofLeft", Vector3(bx - width * 0.235, height + 0.38, bz), Vector3(width * 0.53, 0.16, 18.4), Color(0.32, 0.12, 0.075), false)
+                              roof_left.rotation.z = -0.18
+                              var roof_right: MeshInstance3D = add_box(world, "KeralaTerracottaRoofRight", Vector3(bx + width * 0.235, height + 0.38, bz), Vector3(width * 0.53, 0.16, 18.4), Color(0.37, 0.15, 0.09), false)
+                              roof_right.rotation.z = 0.18
+                          if height >= 8.0 and int(abs(x * 2 + z)) % 5 == 0:
+                              var balcony_y: float = minf(height - 0.95, 4.0)
+                              add_box(world, "BalconySlab", Vector3(bx, balcony_y, bz - 9.02), Vector3(width * 0.73, 0.12, 0.86), Color(0.28, 0.30, 0.28), false)
+                              add_box(world, "BalconyRailTop", Vector3(bx, balcony_y + 0.70, bz - 9.47), Vector3(width * 0.70, 0.07, 0.07), Color(0.16, 0.20, 0.20), false)
+                              for baluster_i in range(5):
+                                  var baluster_x: float = bx + (float(baluster_i) - 2.0) * width * 0.145
+                                  add_box(world, "BalconyBaluster", Vector3(baluster_x, balcony_y + 0.37, bz - 9.47), Vector3(0.045, 0.58, 0.06), Color(0.22, 0.26, 0.26), false)
+                          if int(abs(x - z * 2)) % 4 == 1:
+                              add_box(world, "WallMountedACUnit", Vector3(bx + width * 0.33, 2.45, bz - 8.95), Vector3(0.62, 0.42, 0.28), Color(0.70, 0.71, 0.66), false)
+                              add_box(world, "ACVentGrille", Vector3(bx + width * 0.33, 2.45, bz - 9.105), Vector3(0.39, 0.23, 0.035), Color(0.25, 0.29, 0.29), false)
           """
           if "KeralaTerracottaRoofLeft" not in g:
               require(building_marker in g, "Could not locate building loop for roof/balcony variation")
