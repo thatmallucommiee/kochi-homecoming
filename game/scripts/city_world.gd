@@ -30,6 +30,9 @@ var _home_walk_distance := 0.0
 var _home_roof_root: Node3D
 var _home_interior := false
 var _interaction_key := ""
+var _objective_marker: Node3D
+var _objective_marker_beam: MeshInstance3D
+var _objective_marker_time := 0.0
 
 const HOUSE_PALETTE := [
 	"wall_cream", "wall_pale_green", "wall_sky", "wall_ochre",
@@ -56,6 +59,7 @@ func _process(delta: float) -> void:
 	_update_walkers(delta)
 	_update_idle_citizens(delta)
 	_update_story_triggers()
+	_update_objective_marker(delta)
 
 func _install_city(scene: Node) -> void:
 	if not is_instance_valid(scene):
@@ -82,6 +86,7 @@ func _install_city(scene: Node) -> void:
 	_build_street_life()
 	_build_landmarks()
 	_build_story_landmarks()
+	_create_objective_marker()
 	_flush_static_batches()
 	_build_traffic()
 	_build_parked_vehicles()
@@ -860,6 +865,83 @@ func _update_story_triggers() -> void:
 			_clear_world_interaction(director)
 		return
 	_clear_world_interaction(director)
+
+func _create_objective_marker() -> void:
+	if is_instance_valid(_objective_marker):
+		_objective_marker.queue_free()
+	_objective_marker = Node3D.new()
+	_objective_marker.name = "ObjectiveWaypoint"
+	_city_root.add_child(_objective_marker)
+	var beam_material := StandardMaterial3D.new()
+	beam_material.albedo_color = Color("#f1bd69")
+	beam_material.emission_enabled = true
+	beam_material.emission = Color("#f1a947")
+	beam_material.emission_energy_multiplier = 1.8
+	beam_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var beam_mesh := CylinderMesh.new()
+	beam_mesh.top_radius = 0.10
+	beam_mesh.bottom_radius = 0.34
+	beam_mesh.height = 2.8
+	beam_mesh.radial_segments = 12
+	_objective_marker_beam = MeshInstance3D.new()
+	_objective_marker_beam.name = "WaypointBeacon"
+	_objective_marker_beam.mesh = beam_mesh
+	_objective_marker_beam.material_override = beam_material
+	_objective_marker_beam.position.y = 1.65
+	_objective_marker_beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_objective_marker.add_child(_objective_marker_beam)
+	var cap := MeshInstance3D.new()
+	cap.name = "WaypointLight"
+	var cap_mesh := SphereMesh.new()
+	cap_mesh.radius = 0.28
+	cap_mesh.height = 0.56
+	cap.mesh = cap_mesh
+	cap.material_override = beam_material
+	cap.position.y = 3.15
+	cap.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_objective_marker.add_child(cap)
+	_objective_marker.visible = false
+
+func _update_objective_marker(delta: float) -> void:
+	if not is_instance_valid(_objective_marker):
+		return
+	var director := get_node_or_null("/root/MissionDirector")
+	if director == null:
+		_objective_marker.visible = false
+		return
+	var mission_index := int(director.get("mission_index"))
+	var objective_index := int(director.get("objective_index"))
+	var target := Vector3.ZERO
+	var show_marker := true
+	match mission_index:
+		0:
+			if objective_index == 2:
+				target = Vector3(-48.0, 0.0, -79.5)
+			else:
+				show_marker = false
+		1:
+			if objective_index == 0:
+				target = Vector3(-48.0, 0.0, -79.5)
+			elif objective_index == 2:
+				target = Vector3(-48.0, 0.0, -65.4)
+			else:
+				show_marker = false
+		2:
+			if objective_index == 0:
+				target = Vector3(-48.0, 0.0, -79.5) if _home_interior else Vector3(-48.0, 0.0, -82.0)
+			else:
+				target = Vector3(48.0, 0.0, 40.4)
+		3:
+			target = Vector3(48.0, 0.0, 40.4) if objective_index == 0 else Vector3(-144.0, 0.0, 9.6)
+		_:
+			show_marker = false
+	_objective_marker.visible = show_marker
+	if not show_marker:
+		return
+	_objective_marker.position = target
+	_objective_marker_time += delta
+	_objective_marker_beam.scale = Vector3.ONE * (1.0 + sin(_objective_marker_time * 2.6) * 0.035)
+	_objective_marker_beam.rotation.y = _objective_marker_time * 0.45
 
 func _set_world_interaction(director: Node, label: String, action: Callable) -> void:
 	if _interaction_key == label:
