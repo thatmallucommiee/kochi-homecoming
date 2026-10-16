@@ -23,8 +23,10 @@ namespace KochiHomecoming.Editor
             if (scenes.Length == 0)
                 throw new InvalidOperationException("No enabled scenes were found after scene setup.");
 
-            Directory.CreateDirectory("Build");
-            string outputPath = Path.GetFullPath("Build/KochiHomecoming.apk");
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string outputDirectory = Path.Combine(projectRoot, "Build");
+            Directory.CreateDirectory(outputDirectory);
+            string outputPath = Path.Combine(outputDirectory, "KochiHomecoming.apk");
 
             EditorUserBuildSettings.exportAsGoogleAndroidProject = false;
             EditorUserBuildSettings.buildAppBundle = false;
