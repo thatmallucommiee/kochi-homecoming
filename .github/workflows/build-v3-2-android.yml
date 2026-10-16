@@ -768,8 +768,11 @@ jobs:
           """
               g = g.replace(density_line, density_line + grade, 1)
           if "sun.light_color = Color(1.0, 0.92, 0.78)" not in g:
-              g, sun_count = re.subn(r"(?m)^    sun\\.light_energy = [^\\n]+$", lambda match: match.group(0) + "\\n    sun.light_color = Color(1.0, 0.92, 0.78)", g, count=1)
-              require(sun_count == 1, "Could not locate sun settings")
+              sun_lines = g.splitlines()
+              sun_index = next((i for i, line in enumerate(sun_lines) if line.startswith("    sun.light_energy = ")), -1)
+              require(sun_index >= 0, "Could not locate sun settings")
+              sun_lines.insert(sun_index + 1, "    sun.light_color = Color(1.0, 0.92, 0.78)")
+              g = "\n".join(sun_lines) + "\n"
 
           # Neighborhood silhouettes: selected terracotta rooflines, balconies and AC units
           # break the uniform block grid without inflating every building with detail meshes.
