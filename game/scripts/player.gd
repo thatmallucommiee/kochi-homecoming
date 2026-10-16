@@ -60,7 +60,7 @@ func _physics_process(delta: float) -> void:
 		camera_pivot.rotation.y = wrapf(yaw - rotation.y, -PI, PI)
 	move_and_slide()
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed and event.position.x > get_viewport().get_visible_rect().size.x * 0.48 and look_touch_id == -1:
 			look_touch_id = event.index
@@ -70,6 +70,16 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag and event.index == look_touch_id:
 		var delta_pos: Vector2 = event.position - last_look
 		last_look = event.position
+		yaw -= delta_pos.x * 0.004
+		pitch = clampf(pitch - delta_pos.y * 0.003, -0.55, 0.15)
+		if camera_pivot:
+			camera_pivot.rotation.y = wrapf(yaw - rotation.y, -PI, PI)
+		if camera:
+			camera.rotation.x = pitch
+	elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		# Desktop editor/testing fallback. Mobile UI buttons consume their touch events
+		# before _unhandled_input, preventing accidental camera movement when tapping HUD.
+		var delta_pos: Vector2 = event.relative
 		yaw -= delta_pos.x * 0.004
 		pitch = clampf(pitch - delta_pos.y * 0.003, -0.55, 0.15)
 		if camera_pivot:
