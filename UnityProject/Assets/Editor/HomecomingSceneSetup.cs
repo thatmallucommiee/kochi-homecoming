@@ -94,7 +94,7 @@ namespace KochiHomecoming.Editor
         {
             EnsureFolders();
             CreateMaterials();
-            if (!File.Exists(ScenePath))
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
                 GenerateDemoScene();
             else
             {
@@ -216,7 +216,10 @@ namespace KochiHomecoming.Editor
             for (int z = -48; z <= 48; z += 16)
             {
                 BuildShopfront(-1, z, index++);
-                BuildShopfront(1, z + 4, index++);
+                float eastShopZ = z + 4;
+                // Leave a clear plot around the family home instead of intersecting it with shops.
+                if (eastShopZ < 12f || eastShopZ > 42f)
+                    BuildShopfront(1, eastShopZ, index++);
             }
 
             // Low walls, drains and small forecourt details break up the road edge.
