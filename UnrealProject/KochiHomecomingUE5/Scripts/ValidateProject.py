@@ -68,6 +68,20 @@ for cpp in source_root.rglob("*.cpp"):
         if header.startswith(("Kochi", "Homecoming")) and header not in local_headers:
             errors.append(f"{cpp.relative_to(root)} includes missing project header {header}")
 
+# Guard against regressions found during the first manual source audit.
+all_cpp = "\n".join(p.read_text(encoding="utf-8") for p in source_root.rglob("*.cpp"))
+all_headers = "\n".join(p.read_text(encoding="utf-8") for p in source_root.rglob("*.h"))
+if "AHomecomingPlayerController" in all_cpp or "AHomecomingPlayerController" in all_headers:
+    errors.append("Stale AHomecomingPlayerController type remains; use AKochiPlayerController.")
+if "DriveButton->GetChildAt(0)" in all_cpp:
+    errors.append("UButton is not a panel; access its child using GetContent().")
+if "class USceneComponent;" not in (source_root / "Public/KochiMissionDirector.h").read_text(encoding="utf-8"):
+    errors.append("KochiMissionDirector.h needs a USceneComponent forward declaration.")
+if 'AxisName="VehicleThrottle",Scale=1.0,Key=Gamepad_LeftY' not in input_config:
+    errors.append("Vehicle throttle is not mapped to the Android virtual joystick.")
+if 'AxisName="VehicleSteer",Scale=1.0,Key=Gamepad_LeftX' not in input_config:
+    errors.append("Vehicle steering is not mapped to the Android virtual joystick.")
+
 if errors:
     print("UE5 source-structure validation FAILED:")
     for error in errors:
