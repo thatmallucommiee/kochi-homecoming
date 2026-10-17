@@ -312,11 +312,11 @@ void AKochiCityBuilder::BuildFamilyHome()
     AddBox(TEXT("HomeFloor"), C + FVector(0.f, 0.f, 2.f), FVector(2200.f, 1500.f, 24.f),
            FLinearColor(0.42f, 0.20f, 0.14f), 0.f, true);
     // A deliberate cutaway home: wall sections leave the doorway open and do not trap the camera.
-    AddBox(TEXT("HomeWall"), C + FVector(0.f, -735.f, 190.f), FVector(2200.f, 30.f, 380.f), Wall, 0.f, false);
-    AddBox(TEXT("HomeWall"), C + FVector(-1085.f, 0.f, 190.f), FVector(30.f, 1500.f, 380.f), Wall, 0.f, false);
-    AddBox(TEXT("HomeWall"), C + FVector(1085.f, 0.f, 190.f), FVector(30.f, 1500.f, 380.f), Wall, 0.f, false);
-    AddBox(TEXT("HomeWall"), C + FVector(-650.f, 735.f, 190.f), FVector(900.f, 30.f, 380.f), Wall, 0.f, false);
-    AddBox(TEXT("HomeWall"), C + FVector(650.f, 735.f, 190.f), FVector(900.f, 30.f, 380.f), Wall, 0.f, false);
+    AddBox(TEXT("HomeWall"), C + FVector(0.f, -735.f, 190.f), FVector(2200.f, 30.f, 380.f), Wall, 0.f, true);
+    AddBox(TEXT("HomeWall"), C + FVector(-1085.f, 0.f, 190.f), FVector(30.f, 1500.f, 380.f), Wall, 0.f, true);
+    AddBox(TEXT("HomeWall"), C + FVector(1085.f, 0.f, 190.f), FVector(30.f, 1500.f, 380.f), Wall, 0.f, true);
+    AddBox(TEXT("HomeWall"), C + FVector(-650.f, 735.f, 190.f), FVector(900.f, 30.f, 380.f), Wall, 0.f, true);
+    AddBox(TEXT("HomeWall"), C + FVector(650.f, 735.f, 190.f), FVector(900.f, 30.f, 380.f), Wall, 0.f, true);
     AddBox(TEXT("HomeDoor"), C + FVector(0.f, 720.f, 110.f), FVector(35.f, 24.f, 220.f), Wood, 0.f, false);
     AddBox(TEXT("HomeWindow"), C + FVector(-750.f, 747.f, 245.f), FVector(220.f, 16.f, 150.f), Glass, 0.f, false);
     AddBox(TEXT("HomeWindow"), C + FVector(750.f, 747.f, 245.f), FVector(220.f, 16.f, 150.f), Glass, 0.f, false);
