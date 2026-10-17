@@ -1,0 +1,90 @@
+{
+  "project": "Kochi: Homecoming",
+  "engine": "Unreal Engine 5.8",
+  "status": "prototype-blockout",
+  "verified_build": false,
+  "runtime_generated_assets": [
+    {
+      "name": "Basic cube",
+      "source": "/Engine/BasicShapes/Cube.Cube",
+      "used_for": ["temporary character body parts", "buildings", "roads", "furniture", "vehicle body"],
+      "status": "engine primitive placeholder"
+    },
+    {
+      "name": "Basic sphere",
+      "source": "/Engine/BasicShapes/Sphere.Sphere",
+      "used_for": ["temporary character head", "vegetation", "waypoint", "small props"],
+      "status": "engine primitive placeholder"
+    },
+    {
+      "name": "Basic cylinder",
+      "source": "/Engine/BasicShapes/Cylinder.Cylinder",
+      "used_for": ["tree trunks", "vehicle wheels", "fan and wreck details"],
+      "status": "engine primitive placeholder"
+    },
+    {
+      "name": "Basic shape material",
+      "source": "/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial",
+      "used_for": ["runtime color tinting"],
+      "status": "engine material placeholder"
+    }
+  ],
+  "implemented_in_native_cpp": [
+    "Third-person pawn and camera",
+    "Primitive character body with procedural limb swing",
+    "Procedural road grid, buildings, sidewalks and sparse greenery",
+    "Cutaway family-home blockout and living-room props",
+    "Garage, tea stall and roadside wreck blockouts",
+    "Contextual touch HUD and opening prologue objectives",
+    "Primitive physics-driven starter vehicle"
+  ],
+  "missing_production_assets_and_systems": [
+    {
+      "name": "Vivek rigged character",
+      "required_for": ["skeletal mesh", "retargeted locomotion animations", "proper walk/run/turn cycles"],
+      "status": "not included"
+    },
+    {
+      "name": "Rafi rigged character",
+      "required_for": ["skeletal mesh", "idle and dialogue animations"],
+      "status": "not included"
+    },
+    {
+      "name": "Vehicle art and handling",
+      "required_for": ["authored vehicle mesh", "wheel/suspension setup", "camera and handling tuning"],
+      "status": "primitive blockout only"
+    },
+    {
+      "name": "Kochi environment art",
+      "required_for": ["authored Kerala buildings", "roadside details", "vegetation", "landmark assets", "terrain and water"],
+      "status": "procedural blockout only"
+    },
+    {
+      "name": "Audio and dialogue",
+      "required_for": ["ambient city sound", "vehicle sound", "music", "voice or subtitle dialogue scenes"],
+      "status": "not included"
+    },
+    {
+      "name": "Production gameplay systems",
+      "required_for": ["save/load", "traffic and pedestrians", "mission persistence", "tested collision and mobile performance"],
+      "status": "not included or not verified"
+    },
+    {
+      "name": "Authored level asset",
+      "required_for": ["hand-authored .umap and artist-authored level dressing"],
+      "status": "world is spawned by C++ at runtime"
+    }
+  ],
+  "build_gate": {
+    "source_structure_validation": "automated GitHub Actions check",
+    "unreal_cpp_compile": "not yet run",
+    "editor_playtest": "not yet run",
+    "android_arm64_apk": "not yet produced",
+    "device_test": "not yet run"
+  },
+  "notes": [
+    "Do not describe this prototype as GTA V quality.",
+    "Do not describe a Godot or Three.js build as the UE5 APK.",
+    "Only mark a build verified after UnrealBuildTool/BuildCookRun succeeds and the APK is actually produced; device testing is a separate gate."
+  ]
+}
