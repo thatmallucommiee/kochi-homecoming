@@ -92,6 +92,12 @@ if "const FVector HomeDoor(4500.f, 7950.f, 0.f);" not in mission_source:
     errors.append("Home entry objective must align with the visible front doorway.")
 if "C + FVector(0.f, 720.f, 110.f)" not in city_source:
     errors.append("Visible family-home doorway location changed; re-check mission alignment.")
+home_wall_lines = [line for line in city_source.splitlines() if 'AddBox(TEXT("HomeWall")' in line]
+if len(home_wall_lines) != 5 or any("0.f, true);" not in line for line in home_wall_lines):
+    errors.append("All five cutaway home wall sections must block movement while leaving the doorway gap open.")
+vehicle_source = (source_root / "Private/KochiVehiclePawn.cpp").read_text(encoding="utf-8")
+if vehicle_source.count("FRotator(90.f, 0.f, 0.f)") < 2:
+    errors.append("Vehicle wheel cylinders and hubs must be oriented along their axle.")
 
 manifest_path = root / "ASSET_MANIFEST.json"
 if manifest_path.is_file():
