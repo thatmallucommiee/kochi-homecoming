@@ -132,10 +132,11 @@ void AKochiPlayerCharacter::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     const float Speed = GetVelocity().Size2D();
     const float Swing = (Speed > 18.f) ? FMath::Sin(GetWorld()->GetTimeSeconds() * (Speed > SprintSpeed ? 12.f : 8.f)) * 24.f : 0.f;
-    if (LeftArmPivot) LeftArmPivot->SetRelativeRotation(FRotator(Swing, 0.f, 0.f));
-    if (RightArmPivot) RightArmPivot->SetRelativeRotation(FRotator(-Swing, 0.f, 0.f));
-    if (LeftLegPivot) LeftLegPivot->SetRelativeRotation(FRotator(-Swing * 0.7f, 0.f, 0.f));
-    if (RightLegPivot) RightLegPivot->SetRelativeRotation(FRotator(Swing * 0.7f, 0.f, 0.f));
+    // Vivek faces local +X, so the limbs swing forward/back around local Y (pitch).
+    if (LeftArmPivot) LeftArmPivot->SetRelativeRotation(FRotator(0.f, Swing, 0.f));
+    if (RightArmPivot) RightArmPivot->SetRelativeRotation(FRotator(0.f, -Swing, 0.f));
+    if (LeftLegPivot) LeftLegPivot->SetRelativeRotation(FRotator(0.f, -Swing * 0.7f, 0.f));
+    if (RightLegPivot) RightLegPivot->SetRelativeRotation(FRotator(0.f, Swing * 0.7f, 0.f));
 }
 
 void AKochiPlayerCharacter::SetupPlayerInputComponent(UInputComponent* Input)
