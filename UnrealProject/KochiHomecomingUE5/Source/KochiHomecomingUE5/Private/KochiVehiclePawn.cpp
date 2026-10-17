@@ -48,7 +48,7 @@ AKochiVehiclePawn::AKochiVehiclePawn()
     BodyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CarBodyVisual"));
     BodyMesh->SetupAttachment(PhysicsBody);
     BodyMesh->SetStaticMesh(CubeMesh);
-    BodyMesh->SetRelativeScale3D(FVector(2.05f, 0.91f, 0.54f));
+    BodyMesh->SetRelativeScale3D(FVector(4.10f, 1.82f, 0.54f));
     BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     if (UMaterialInstanceDynamic* Paint = CarMaterial(this, FLinearColor(0.10f, 0.22f, 0.31f)))
     {
