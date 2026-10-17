@@ -212,7 +212,7 @@ void AKochiCityBuilder::AddGenericBuilding(const FVector& Center, float Width, f
     const FLinearColor Wall = Palette[PaletteIndex % UE_ARRAY_COUNT(Palette)];
     const float Yaw = bFacingY ? 0.f : 90.f;
     const FVector Extents = bFacingY ? FVector(Width, Depth, Height) : FVector(Depth, Width, Height);
-    AddBox(TEXT("BuildingWall"), Center + FVector(0.f, 0.f, Height * 0.5f), Extents, Wall, Yaw, true);
+    AddBox(FName(*FString::Printf(TEXT("BuildingWall_%d"), PaletteIndex % UE_ARRAY_COUNT(Palette))), Center + FVector(0.f, 0.f, Height * 0.5f), Extents, Wall, Yaw, true);
     AddBox(TEXT("BuildingRoof"), Center + FVector(0.f, 0.f, Height + 12.f),
            FVector(Extents.X + 90.f, Extents.Y + 90.f, 24.f), BrickRed, 0.f, true);
 
@@ -317,7 +317,7 @@ void AKochiCityBuilder::BuildFamilyHome()
     AddBox(TEXT("HomeWall"), C + FVector(1085.f, 0.f, 190.f), FVector(30.f, 1500.f, 380.f), Wall, 0.f, false);
     AddBox(TEXT("HomeWall"), C + FVector(-650.f, 735.f, 190.f), FVector(900.f, 30.f, 380.f), Wall, 0.f, false);
     AddBox(TEXT("HomeWall"), C + FVector(650.f, 735.f, 190.f), FVector(900.f, 30.f, 380.f), Wall, 0.f, false);
-    AddBox(TEXT("HomeDoor"), C + FVector(450.f, 720.f, 110.f), FVector(35.f, 24.f, 220.f), Wood, 0.f, false);
+    AddBox(TEXT("HomeDoor"), C + FVector(0.f, 720.f, 110.f), FVector(35.f, 24.f, 220.f), Wood, 0.f, false);
     AddBox(TEXT("HomeWindow"), C + FVector(-750.f, 747.f, 245.f), FVector(220.f, 16.f, 150.f), Glass, 0.f, false);
     AddBox(TEXT("HomeWindow"), C + FVector(750.f, 747.f, 245.f), FVector(220.f, 16.f, 150.f), Glass, 0.f, false);
 
