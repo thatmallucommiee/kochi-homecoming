@@ -101,6 +101,11 @@ if len(home_wall_lines) != 5 or any("0.f, true);" not in line for line in home_w
 vehicle_source = (source_root / "Private/KochiVehiclePawn.cpp").read_text(encoding="utf-8")
 if vehicle_source.count("FRotator(90.f, 0.f, 0.f)") < 2:
     errors.append("Vehicle wheel cylinders and hubs must be oriented along their axle.")
+character_source = (source_root / "Private/KochiPlayerCharacter.cpp").read_text(encoding="utf-8")
+if "LeftArmPivot->SetRelativeRotation(FRotator(0.f, Swing, 0.f))" not in character_source:
+    errors.append("Procedural arm swing must rotate forward/back around local Y.")
+if "LeftLegPivot->SetRelativeRotation(FRotator(0.f, -Swing * 0.7f, 0.f))" not in character_source:
+    errors.append("Procedural leg swing must rotate forward/back around local Y.")
 
 manifest_path = root / "ASSET_MANIFEST.json"
 if manifest_path.is_file():
