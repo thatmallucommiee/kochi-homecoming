@@ -152,6 +152,7 @@ void AKochiVehiclePawn::Tick(float DeltaSeconds)
     const float WheelSpin = Speed2D * DeltaSeconds * 0.08f;
     for (UStaticMeshComponent* Wheel : Wheels)
     {
+        // Wheel cylinders are rotated 90 degrees around X, making local Y their axle.
         if (Wheel) Wheel->AddLocalRotation(FRotator(0.f, WheelSpin, 0.f));
     }
 }
