@@ -40,7 +40,7 @@ void UKochiMobileHUD::NativeConstruct()
     DriveButton = AddButton(TEXT("DriveButton"), FText::FromString(TEXT("DRIVE")),
         FAnchors(1.f, 0.f, 1.f, 0.f), FMargin(-196.f, 104.f, -24.f, 172.f));
     DriveButton->OnClicked.AddDynamic(this, &UKochiMobileHUD::HandleDriveClicked);
-    DriveButtonLabel = Cast<UTextBlock>(DriveButton->GetChildAt(0));
+    DriveButtonLabel = Cast<UTextBlock>(DriveButton->GetContent());
     DriveButton->SetVisibility(ESlateVisibility::Collapsed);
 }
 
@@ -68,7 +68,9 @@ void UKochiMobileHUD::AddText(const FName Name, UCanvasPanel* Canvas, const FTex
     Label->SetText(Text);
     Label->SetColorAndOpacity(FSlateColor(FLinearColor(0.96f, 0.92f, 0.82f)));
     Label->SetAutoWrapText(true);
-    Label->SetFont(FSlateFontInfo());
+    FSlateFontInfo Font = Label->GetFont();
+    Font.Size = FontSize;
+    Label->SetFont(Font);
     Label->SetJustification(ETextJustify::Left);
     ObjectiveLabel = Label;
 
