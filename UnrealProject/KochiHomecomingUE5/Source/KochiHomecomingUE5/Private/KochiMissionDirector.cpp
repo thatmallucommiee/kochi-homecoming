@@ -15,7 +15,7 @@
 
 namespace
 {
-    const FVector HomeDoor(4500.f, 8050.f, 0.f);
+    const FVector HomeDoor(4500.f, 7950.f, 0.f);
     const FVector HomeInterior(4500.f, 7130.f, 100.f);
     const FVector FamilyPhoto(5150.f, 6536.f, 0.f);
     const FVector HomeExit(4500.f, 7970.f, 0.f);
