@@ -6,6 +6,7 @@
 
 class UCameraComponent;
 class USpringArmComponent;
+class UStaticMesh;
 class UStaticMeshComponent;
 class USceneComponent;
 
