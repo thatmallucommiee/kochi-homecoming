@@ -5,6 +5,7 @@
 #include "KochiMissionDirector.generated.h"
 
 class UStaticMeshComponent;
+class USceneComponent;
 class UStaticMesh;
 
 UCLASS()
