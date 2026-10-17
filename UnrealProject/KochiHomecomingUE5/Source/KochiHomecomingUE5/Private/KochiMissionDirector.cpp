@@ -65,7 +65,7 @@ void AKochiMissionDirector::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    AHomecomingPlayerController* PC = Cast<AHomecomingPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
+    AKochiPlayerController* PC = Cast<AKochiPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
     APawn* Pawn = PC ? PC->GetPawn() : nullptr;
     if (!Pawn) return;
 
@@ -152,7 +152,7 @@ bool AKochiMissionDirector::IsAtObjectiveLocation(const FVector& PlayerLocation,
 
 void AKochiMissionDirector::TryInteract()
 {
-    AHomecomingPlayerController* PC = Cast<AHomecomingPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
+    AKochiPlayerController* PC = Cast<AKochiPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
     APawn* Pawn = PC ? PC->GetPawn() : nullptr;
     if (!Pawn || Cast<AKochiVehiclePawn>(Pawn)) return;
 
@@ -208,7 +208,7 @@ void AKochiMissionDirector::AdvanceObjective(const FText& StoryMessage)
     DistanceForObjective = 0.f;
     bHaveLastLocation = false;
 
-    AHomecomingPlayerController* PC = Cast<AHomecomingPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
+    AKochiPlayerController* PC = Cast<AKochiPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
     if (PC && PC->GetMobileHUD())
     {
         PC->GetMobileHUD()->ShowStoryMessage(StoryMessage, 4.f);
@@ -218,7 +218,7 @@ void AKochiMissionDirector::AdvanceObjective(const FText& StoryMessage)
 
 void AKochiMissionDirector::RefreshHUD()
 {
-    AHomecomingPlayerController* PC = Cast<AHomecomingPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
+    AKochiPlayerController* PC = Cast<AKochiPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
     if (!PC || !PC->GetMobileHUD()) return;
 
     const TCHAR* Objectives[] = {
