@@ -10,7 +10,7 @@ class UCameraComponent;
 class UStaticMeshComponent;
 class UStaticMesh;
 class AKochiPlayerCharacter;
-class AHomecomingPlayerController;
+class AKochiPlayerController;
 
 UCLASS()
 class KOCHIHOMECOMINGUE5_API AKochiVehiclePawn : public APawn
@@ -23,8 +23,8 @@ public:
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
     bool IsOccupied() const { return SavedDriver != nullptr; }
-    void EnterVehicle(AHomecomingPlayerController* Controller, AKochiPlayerCharacter* Driver);
-    void ExitVehicle(AHomecomingPlayerController* Controller);
+    void EnterVehicle(AKochiPlayerController* Controller, AKochiPlayerCharacter* Driver);
+    void ExitVehicle(AKochiPlayerController* Controller);
 
 private:
     void SetThrottle(float Value);
