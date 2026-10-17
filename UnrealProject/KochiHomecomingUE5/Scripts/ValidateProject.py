@@ -82,6 +82,16 @@ if 'AxisName="VehicleThrottle",Scale=1.0,Key=Gamepad_LeftY' not in input_config:
 if 'AxisName="VehicleSteer",Scale=1.0,Key=Gamepad_LeftX' not in input_config:
     errors.append("Vehicle steering is not mapped to the Android virtual joystick.")
 
+game_mode = (source_root / "Private/KochiHomecomingGameMode.cpp").read_text(encoding="utf-8")
+mission_source = (source_root / "Private/KochiMissionDirector.cpp").read_text(encoding="utf-8")
+city_source = (source_root / "Private/KochiCityBuilder.cpp").read_text(encoding="utf-8")
+if "FVector(1050.f, 400.f, 65.f)" not in game_mode:
+    errors.append("Starter car spawn must align its wheels with the road surface.")
+if "const FVector HomeDoor(4500.f, 7950.f, 0.f);" not in mission_source:
+    errors.append("Home entry objective must align with the visible front doorway.")
+if "C + FVector(0.f, 720.f, 110.f)" not in city_source:
+    errors.append("Visible family-home doorway location changed; re-check mission alignment.")
+
 if errors:
     print("UE5 source-structure validation FAILED:")
     for error in errors:
