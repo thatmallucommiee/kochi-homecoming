@@ -19,7 +19,10 @@ void AKochiPlayerController::BeginPlay()
     Super::BeginPlay();
     if (!IsLocalController()) return;
 
-    SetInputMode(FInputModeGameOnly());
+    FInputModeGameAndUI InputMode;
+    InputMode.SetHideCursorDuringCapture(true);
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockInFullscreen);
+    SetInputMode(InputMode);
     MobileHUD = CreateWidget<UKochiMobileHUD>(this, UKochiMobileHUD::StaticClass());
     if (MobileHUD)
     {
