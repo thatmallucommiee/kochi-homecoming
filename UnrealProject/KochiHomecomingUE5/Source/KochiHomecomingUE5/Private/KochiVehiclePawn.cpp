@@ -111,12 +111,12 @@ void AKochiVehiclePawn::BuildCarVisuals()
                 FName(*FString::Printf(TEXT("Wheel_%s_%s"), Side < 0.f ? TEXT("L") : TEXT("R"),
                     Longitudinal < 0.f ? TEXT("Rear") : TEXT("Front"))),
                 CylinderMesh, FVector(Longitudinal, Side * 87.f, -32.f),
-                FVector(66.f, 66.f, 23.f), Trim, FRotator(0.f, 0.f, 90.f));
+                FVector(66.f, 66.f, 23.f), Trim, FRotator(90.f, 0.f, 0.f));
             Wheels.Add(Wheel);
             AddPart(FName(*FString::Printf(TEXT("Hub_%s_%s"), Side < 0.f ? TEXT("L") : TEXT("R"),
                     Longitudinal < 0.f ? TEXT("Rear") : TEXT("Front"))),
                 CylinderMesh, FVector(Longitudinal, Side * 101.f, -32.f),
-                FVector(30.f, 30.f, 7.f), Chrome, FRotator(0.f, 0.f, 90.f));
+                FVector(30.f, 30.f, 7.f), Chrome, FRotator(90.f, 0.f, 0.f));
         }
     }
     AddPart(TEXT("FrontBumper"), CubeMesh, FVector(210.f, 0.f, -20.f), FVector(16.f, 182.f, 15.f), Chrome);
