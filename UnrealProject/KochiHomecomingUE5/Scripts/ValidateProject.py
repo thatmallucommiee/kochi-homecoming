@@ -43,6 +43,7 @@ required = [
     "Source/KochiHomecomingUE5/Public/KochiMissionDirector.h",
     "Source/KochiHomecomingUE5/Private/KochiMissionDirector.cpp",
     "Scripts/BuildAndroid.ps1",
+    "ASSET_MANIFEST.json",
 ]
 for relative in required:
     if not (root / relative).is_file():
@@ -91,6 +92,21 @@ if "const FVector HomeDoor(4500.f, 7950.f, 0.f);" not in mission_source:
     errors.append("Home entry objective must align with the visible front doorway.")
 if "C + FVector(0.f, 720.f, 110.f)" not in city_source:
     errors.append("Visible family-home doorway location changed; re-check mission alignment.")
+
+manifest_path = root / "ASSET_MANIFEST.json"
+if manifest_path.is_file():
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("engine") != "Unreal Engine 5.8":
+            errors.append("Asset manifest engine must match Unreal Engine 5.8.")
+        if manifest.get("verified_build") is not False:
+            errors.append("Do not mark the project build verified before a real Unreal build.")
+        if not manifest.get("missing_production_assets_and_systems"):
+            errors.append("Asset manifest must explicitly list missing production assets and systems.")
+        if manifest.get("build_gate", {}).get("android_arm64_apk") != "not yet produced":
+            errors.append("Asset manifest must report the Android APK gate honestly until packaging succeeds.")
+    except (json.JSONDecodeError, OSError) as exc:
+        errors.append(f"Invalid asset manifest JSON: {exc}")
 
 if errors:
     print("UE5 source-structure validation FAILED:")
