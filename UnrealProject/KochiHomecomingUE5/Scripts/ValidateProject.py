@@ -78,6 +78,9 @@ if "DriveButton->GetChildAt(0)" in all_cpp:
     errors.append("UButton is not a panel; access its child using GetContent().")
 if "class USceneComponent;" not in (source_root / "Public/KochiMissionDirector.h").read_text(encoding="utf-8"):
     errors.append("KochiMissionDirector.h needs a USceneComponent forward declaration.")
+player_header = (source_root / "Public/KochiPlayerCharacter.h").read_text(encoding="utf-8")
+if "class UStaticMesh;" not in player_header:
+    errors.append("KochiPlayerCharacter.h needs a UStaticMesh forward declaration.")
 if 'AxisName="VehicleThrottle",Scale=1.0,Key=Gamepad_LeftY' not in input_config:
     errors.append("Vehicle throttle is not mapped to the Android virtual joystick.")
 if 'AxisName="VehicleSteer",Scale=1.0,Key=Gamepad_LeftX' not in input_config:
