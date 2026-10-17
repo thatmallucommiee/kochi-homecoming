@@ -55,6 +55,6 @@ void AKochiHomecomingGameMode::StartPlay()
     // A single starter car gives the player a reachable, optional driving interaction.
     GetWorld()->SpawnActor<AKochiVehiclePawn>(
         AKochiVehiclePawn::StaticClass(),
-        FVector(1050.f, 400.f, 115.f),
+        FVector(1050.f, 400.f, 65.f),
         FRotator::ZeroRotator);
 }
