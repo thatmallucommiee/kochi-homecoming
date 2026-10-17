@@ -174,7 +174,7 @@ void AKochiVehiclePawn::SetSteering(float Value)
     SteeringInput = FMath::Clamp(Value, -1.f, 1.f);
 }
 
-void AKochiVehiclePawn::EnterVehicle(AHomecomingPlayerController* Controller, AKochiPlayerCharacter* Driver)
+void AKochiVehiclePawn::EnterVehicle(AKochiPlayerController* Controller, AKochiPlayerCharacter* Driver)
 {
     if (!Controller || !Driver || IsOccupied()) return;
     SavedDriver = Driver;
@@ -186,7 +186,7 @@ void AKochiVehiclePawn::EnterVehicle(AHomecomingPlayerController* Controller, AK
     SteeringInput = 0.f;
 }
 
-void AKochiVehiclePawn::ExitVehicle(AHomecomingPlayerController* Controller)
+void AKochiVehiclePawn::ExitVehicle(AKochiPlayerController* Controller)
 {
     if (!Controller || !SavedDriver) return;
 
